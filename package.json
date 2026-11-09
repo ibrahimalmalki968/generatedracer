@@ -5,8 +5,13 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "start": "node tools/serve.mjs",
+    "start": "node server/server.js",
     "test": "node --test"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "ws": "8.22.2"
+  }
 }

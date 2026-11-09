@@ -1,0 +1,86 @@
+import { createServer } from 'node:http';
+import { WebSocketServer } from 'ws';
+import { pathToFileURL } from 'node:url';
+import { networkInterfaces } from 'node:os';
+import { Game } from './game.js';
+import { staticRequest } from './static.js';
+import { SIMULATION_STEP } from '../js/constants.js';
+
+export async function createGameServer({ host = '127.0.0.1', port = 0, countdownMs = 3000, autoTick = true } = {}) {
+  const game = new Game({ countdownMs });
+  const http = createServer(staticRequest);
+  const wss = new WebSocketServer({ noServer: true, maxPayload: 4096, perMessageDeflate: false });
+  http.on('upgrade', (req, socket, head) => {
+    try {
+      const origin = req.headers.origin;
+      if (req.url !== '/socket' || wss.clients.size >= 128 || (origin && new URL(origin).host !== req.headers.host)) {
+        socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); return;
+      }
+      wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws));
+    } catch { socket.destroy(); }
+  });
+  wss.on('connection', ws => {
+    ws.alive = true; ws.tokens = 120; ws.tokenAt = performance.now(); ws.commands = 12; ws.commandAt = performance.now();
+    const timeout = setTimeout(() => { if (!ws.session) ws.close(1008, 'Enter a nickname first'); }, 5000);
+    ws.on('pong', () => { ws.alive = true; });
+    ws.on('error', () => {});
+    ws.on('close', () => { clearTimeout(timeout); game.disconnect(ws); });
+    ws.on('message', (raw, binary) => {
+      let requestId;
+      try {
+        const now = performance.now();
+        ws.tokens = Math.min(120, ws.tokens + (now - ws.tokenAt) * 0.075); ws.tokenAt = now;
+        if (--ws.tokens < 0) { ws.close(1008, 'Too many messages'); return; }
+        if (binary) throw new Error('Use JSON messages.');
+        const m = JSON.parse(raw.toString());
+        if (!m || typeof m !== 'object' || Array.isArray(m) || typeof m.type !== 'string') throw new Error('Invalid message.');
+        requestId = typeof m.requestId === 'string' ? m.requestId.slice(0, 64) : undefined;
+        if (m.type !== 'input') {
+          ws.commands = Math.min(12, ws.commands + (now - ws.commandAt) * 0.004); ws.commandAt = now;
+          if (--ws.commands < 0) throw new Error('Slow down and try again.');
+        }
+        if (m.type === 'hello' && !ws.session) { game.hello(ws, m); clearTimeout(timeout); return; }
+        const s = ws.session;
+        if (!s) throw new Error('Enter a nickname first.');
+        if (m.type === 'create') game.create(s, m);
+        else if (m.type === 'join') game.join(s, m.code);
+        else if (m.type === 'list') game.list(ws);
+        else if (m.type === 'start') game.start(s);
+        else if (m.type === 'ready') game.ready(s, m.ready);
+        else if (m.type === 'input') game.input(s, m);
+        else if (m.type === 'leave') game.leave(s);
+        else if (m.type === 'back') game.back(s, m.raceId);
+        else throw new Error('Unknown action.');
+        if (m.type !== 'input') game.send(ws, { type: 'ack', requestId });
+      } catch (e) { game.send(ws, { type: 'error', requestId, message: e instanceof SyntaxError ? 'Invalid JSON.' : e.message }); }
+    });
+  });
+  let accumulator = 0, previous = performance.now();
+  const timers = [];
+  if (autoTick) timers.push(setInterval(() => {
+    const now = performance.now(); accumulator += Math.min((now - previous) / 1000, 0.25); previous = now;
+    while (accumulator >= SIMULATION_STEP) { game.step(); accumulator -= SIMULATION_STEP; }
+  }, 8));
+  timers.push(setInterval(() => game.broadcastSnapshots(), 50));
+  timers.push(setInterval(() => {
+    game.sweep();
+    for (const ws of wss.clients) { if (!ws.alive) ws.terminate(); else { ws.alive = false; ws.ping(); } }
+  }, 10000));
+  await new Promise((resolve, reject) => { http.once('error', reject); http.listen(port, host, resolve); });
+  return { http, wss, game, port: http.address().port,
+    async close() { timers.forEach(clearInterval); for (const ws of wss.clients) ws.terminate();
+      await new Promise(resolve => wss.close(resolve)); await new Promise(resolve => http.close(resolve)); } };
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const host = process.env.HOST || '0.0.0.0', port = Number(process.env.PORT || 8081);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) { console.error('PORT must be an integer from 1 to 65535.'); process.exit(1); }
+  try {
+    const server = await createGameServer({ host, port });
+    console.log(`GenerateRacer: http://127.0.0.1:${port}/`);
+    if (host === '0.0.0.0') for (const addresses of Object.values(networkInterfaces())) for (const a of addresses || []) {
+      if (a.family === 'IPv4' && !a.internal) console.log(`Local network: http://${a.address}:${port}/`);
+    }
+    for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.close().then(() => process.exit(0)));
+  } catch (e) { console.error(e.code === 'EADDRINUSE' ? `Port ${port} is in use. Stop the previous preview or select another PORT.` : e.message); process.exit(1); }
+}

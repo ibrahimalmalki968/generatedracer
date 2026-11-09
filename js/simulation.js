@@ -13,7 +13,7 @@ export const START_POSITIONS = [
 
 export class LocalSession {
   constructor(humans = 1) {
-    if (humans !== 1 && humans !== 2) throw new RangeError('Local modes support one or two humans.');
+    if (!Number.isInteger(humans) || humans < 1 || humans > 6) throw new RangeError('Races support one to six humans.');
     this.humans = humans;
     // Solo has five AI; local two-human races have no AI filling empty slots.
     this.cars = Array.from({ length: humans === 1 ? 1 + NUM_AI : humans }, (_, id) => {
