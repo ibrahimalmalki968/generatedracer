@@ -128,7 +128,11 @@ function finish() {
   setInputs(false);
   const results = document.getElementById('results');
   results.replaceChildren();
-  for (const r of session.race.getResults()) {
+  const standings = session.race.getResults();
+  const winner = standings.find(r => r.status === 'finished');
+  document.getElementById('resultsSummary').textContent = winner ? `${winner.name} wins · 3 valid laps` : 'Race ended · no finisher';
+  document.getElementById('resultsHint').textContent = online ? 'Return everyone to this room’s lobby for a rematch. All Ready statuses reset.' : 'Race again for a fresh start.';
+  for (const r of standings) {
     const row = document.createElement('li');
     row.className = `result-row${r.isHuman ? ' result-human' : ''}`;
     for (const [className, text] of [['pos', r.status === 'disconnected' ? 'DNF' : `${r.position}.`], ['name', r.name],

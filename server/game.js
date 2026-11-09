@@ -159,7 +159,9 @@ export class Game {
   finalize(r) {
     if (r.phase !== 'racing') return;
     r.phase = 'results';
-    r.results = r.engine.race.getResults();
+    r.results = Object.freeze(r.engine.race.getResults().map(result => Object.freeze({ ...result,
+      position: result.status === 'disconnected' ? null : result.position,
+    })));
     this.publish(r); this.publicLists();
   }
 
@@ -167,6 +169,9 @@ export class Game {
     const r = this.room(s);
     if (r.phase !== 'results' || r.raceId !== raceId) throw new Error('Results have already changed.');
     r.engine = null; r.raceId = null; r.results = null; r.tick = 0;
+    for (const m of r.members.values()) {
+      m.carId = null; m.seq = 0; m.appliedSeq = 0; m.boost = 0; m.input = NEUTRAL; m.pendingBoost = null; m.receivedAt = 0;
+    }
     this.rosterChanged(r); this.publicLists();
   }
 
