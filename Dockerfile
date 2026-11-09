@@ -5,7 +5,7 @@ FROM nginx:alpine
 RUN rm -rf /usr/share/nginx/html/*
 
 # Copy game files
-COPY index.html game.css /usr/share/nginx/html/
+COPY index.html game.css LICENSE /usr/share/nginx/html/
 COPY js/ /usr/share/nginx/html/js/
 
 EXPOSE 80

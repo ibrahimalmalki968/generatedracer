@@ -1,213 +1,126 @@
-/**
- * race.js – Race state manager.
- *
- * Responsibilities:
- *  • Lap counting via checkpoints
- *  • Track progress (used for position ranking)
- *  • Timing (overall and per-lap)
- *  • Detecting race finish
- */
+/** Ordered directional gates and a simulation clock. No race expiration. */
+import { CHECKPOINT_INDICES, NUM_CHECKPOINTS, SPLINE_POINTS, trackProgress } from './track.js';
+import { NUM_LAPS, ORDINALS, TRACK_WIDTH, CAR_WIDTH, MAX_SPEED, TURBO_SPEED_MULT, CAR_LENGTH } from './constants.js';
 
-import {
-  CHECKPOINT_INDICES, NUM_CHECKPOINTS, SPLINE_DIST, SPLINE_POINTS, TRACK_LENGTH, nearestSplineIdx,
-} from './track.js';
-import { NUM_LAPS, ORDINALS } from './constants.js';
+export const GATES = CHECKPOINT_INDICES.map(idx => {
+  const p = SPLINE_POINTS[idx];
+  const before = SPLINE_POINTS[(idx - 1 + SPLINE_POINTS.length) % SPLINE_POINTS.length];
+  const after = SPLINE_POINTS[(idx + 1) % SPLINE_POINTS.length];
+  const length = Math.hypot(after.x - before.x, after.y - before.y);
+  return { ...p, tx: (after.x - before.x) / length, ty: (after.y - before.y) / length };
+});
 
-const PROGRESS_SEARCH_WINDOW = 32;
-
-function nearestSplineIdxAround(x, y, centerIdx, windowSize) {
-  const n = SPLINE_POINTS.length;
-  let best = centerIdx;
-  let bestD = Infinity;
-
-  for (let off = -windowSize; off <= windowSize; off++) {
-    const idx = (centerIdx + off + n) % n;
-    const dx = SPLINE_POINTS[idx].x - x;
-    const dy = SPLINE_POINTS[idx].y - y;
-    const d = dx * dx + dy * dy;
-    if (d < bestD) {
-      bestD = d;
-      best = idx;
-    }
-  }
-
-  return best;
+export function crossingFraction(from, to, gate) {
+  const a = (from.x - gate.x) * gate.tx + (from.y - gate.y) * gate.ty;
+  const b = (to.x - gate.x) * gate.tx + (to.y - gate.y) * gate.ty;
+  if (a >= 0 || b < 0) return null;
+  const fraction = -a / (b - a);
+  const x = from.x + (to.x - from.x) * fraction - gate.x;
+  const y = from.y + (to.y - from.y) * fraction - gate.y;
+  return Math.abs(-x * gate.ty + y * gate.tx) <= (TRACK_WIDTH + CAR_WIDTH) / 2 ? fraction : null;
 }
 
 export class RaceManager {
-  /**
-   * @param {import('./car.js').Car[]} cars
-   */
   constructor(cars) {
-    this.cars       = cars;
-    this.startTime  = null;  // set when race starts
-    this.finished   = false;
-    this.winnerId   = null;
+    this.cars = cars;
+    this.startTime = null;
+    this.elapsed = 0;
+    this.finished = false;
+    this.winnerId = null;
     this._finishCounter = 0;
-
-    // Per-car state
-    this._state = cars.map(() => ({
-      lap:               0,
-      checkpointsPassed: new Set(),
-      prevProgress:      -1,       // track progress in previous frame
-      prevSplineIdx:     -1,
-      progress:          0,
-      lapStartTime:      null,
-      bestLapTime:       null,
-      finishTime:        null,
-      finishSeq:         null,
-      ordinal:           '',
-    }));
+    this._state = cars.map(c => ({ lap: 0, nextCheckpoint: 1, previous: { x: c.x, y: c.y },
+      progress: 0, lapStartTime: 0, bestLapTime: null, finishTime: null, finishSeq: null, disconnected: false }));
   }
 
-  /** Call once when the countdown ends and racing begins. */
   start() {
-    const now = performance.now();
-    this.startTime = now;
-    this._state.forEach((s) => { s.lapStartTime = now; });
+    if (this.startTime !== null) return;
+    this.startTime = 0;
+    this.cars.forEach((c, i) => { this._state[i].previous = { x: c.x, y: c.y }; });
   }
 
-  /**
-   * Update race state for all cars.
-   * @param {number} _dt  – frame delta (seconds, unused but kept for symmetry)
-   */
-  update(_dt) {
-    if (!this.startTime) return;
-    const now = performance.now();
-
-    for (let i = 0; i < this.cars.length; i++) {
-      const car = this.cars[i];
-      const s   = this._state[i];
-      if (s.finishTime !== null) continue; // already finished
-
-      if (s.prevSplineIdx < 0) {
-        s.prevSplineIdx = nearestSplineIdx(car.x, car.y);
-      }
-      const splineIdx = nearestSplineIdxAround(car.x, car.y, s.prevSplineIdx, PROGRESS_SEARCH_WINDOW);
-      const prog = SPLINE_DIST[splineIdx] / TRACK_LENGTH;
-
-      // -- Checkpoint detection -----------------------------------------------
-      for (let k = 0; k < NUM_CHECKPOINTS; k++) {
-        const cpIdx = CHECKPOINT_INDICES[k];
-
-        if (k === 0) continue; // start/finish handled below
-
-        if (!s.checkpointsPassed.has(k)) {
-          // Check proximity to the checkpoint gate
-          const cpPt = SPLINE_POINTS[cpIdx];
-          const dist = Math.hypot(car.x - cpPt.x, car.y - cpPt.y);
-          if (dist < 120) {
-            s.checkpointsPassed.add(k);
+  update(dt) {
+    if (this.startTime === null || this.finished || !Number.isFinite(dt) || dt <= 0) return;
+    const before = this.elapsed;
+    this.elapsed += dt * 1000;
+    const finishers = [];
+    this.cars.forEach((car, i) => {
+      const s = this._state[i];
+      if (s.finishTime !== null || s.disconnected) return;
+      const distance = Math.hypot(car.x - s.previous.x, car.y - s.previous.y);
+      const maxStep = MAX_SPEED * TURBO_SPEED_MULT * dt + CAR_LENGTH * 2; // allow collision separation
+      const f = distance <= maxStep ? crossingFraction(s.previous, car, GATES[s.nextCheckpoint]) : null;
+      if (f !== null) {
+        if (s.nextCheckpoint === 0) {
+          const crossedAt = before + dt * 1000 * f;
+          const lapTime = crossedAt - s.lapStartTime;
+          s.bestLapTime = s.bestLapTime === null ? lapTime : Math.min(s.bestLapTime, lapTime);
+          s.lap++;
+          s.lapStartTime = crossedAt;
+          s.nextCheckpoint = 1;
+          if (s.lap === NUM_LAPS) {
+            s.finishTime = crossedAt;
+            car.finished = true;
+            car.speed = 0;
+            finishers.push({ car, s });
           }
+          car.beginLap(s.lap);
+        } else {
+          s.nextCheckpoint = (s.nextCheckpoint + 1) % NUM_CHECKPOINTS;
         }
       }
-
-      // -- Start/finish line (checkpoint 0) / lap completion ------------------
-      // Detect crossing from progress ~1 → ~0 (wrap-around).
-      // Also require the car to be physically near the start/finish gate to
-      // avoid false lap counts when nearest-spline indexing jumps.
-      const allCheckpointsDone = s.checkpointsPassed.size >= NUM_CHECKPOINTS - 1;
-      const wrapped = s.prevProgress > 0.9 && prog < 0.1;
-      const startIdx = CHECKPOINT_INDICES[0];
-      const startPt = SPLINE_POINTS[startIdx];
-      const distToStart = Math.hypot(car.x - startPt.x, car.y - startPt.y);
-      const crossedStartGate = distToStart < 130;
-
-      if (wrapped && allCheckpointsDone && crossedStartGate) {
-        s.lap++;
-        const lapTime = now - s.lapStartTime;
-        if (s.bestLapTime === null || lapTime < s.bestLapTime) {
-          s.bestLapTime = lapTime;
-        }
-        s.lapStartTime      = now;
-        s.checkpointsPassed = new Set();
-
-        if (s.lap >= NUM_LAPS) {
-          s.finishTime = now;
-          s.finishSeq = ++this._finishCounter;
-          car.finished = true;
-          if (this.winnerId === null) this.winnerId = i;
-        }
-      }
-
-      s.prevProgress = prog;
-      s.prevSplineIdx = splineIdx;
-      s.progress = prog;
-      car.lap        = s.lap;
-    }
-
-    // -- Position ranking -------------------------------------------------------
-    const ranking = this.cars
-      .map((_c, i) => ({ i, s: this._state[i] }))
-      .sort((a, b) => {
-        const aFinished = a.s.finishSeq !== null;
-        const bFinished = b.s.finishSeq !== null;
-        if (aFinished && bFinished) return a.s.finishSeq - b.s.finishSeq;
-        if (aFinished) return -1;
-        if (bFinished) return 1;
-
-        const aProgress = a.s.lap + a.s.progress;
-        const bProgress = b.s.lap + b.s.progress;
-        return bProgress - aProgress;
-      });
-
-    ranking.forEach((r, pos) => {
-      this.cars[r.i].position = pos + 1;
-      this._state[r.i].ordinal = ORDINALS[pos] ?? `${pos + 1}th`;
+      s.previous = { x: car.x, y: car.y };
+      // Ranking is checkpoint-bounded, so skipping a gate cannot improve a full sector.
+      const sector = s.nextCheckpoint === 0 ? NUM_CHECKPOINTS - 1 : s.nextCheckpoint - 1;
+      s.progress = Math.max(sector / NUM_CHECKPOINTS,
+        Math.min((sector + 1) / NUM_CHECKPOINTS - 0.00001, trackProgress(car.x, car.y)));
+      car.lap = s.lap;
     });
-
-    // Race is done when the winner (first car to finish) completes their final lap
-    if (this.winnerId !== null) {
-      this.finished = true;
-    }
+    finishers.sort((a, b) => a.s.finishTime - b.s.finishTime || a.car.id - b.car.id).forEach(({ car, s }) => {
+      s.finishSeq = ++this._finishCounter;
+      if (this.winnerId === null) this.winnerId = car.id;
+    });
+    this._rank();
+    this._checkComplete();
   }
 
-  // ---------------------------------------------------------------------------
-  // Getters used by HUD / main
-  // ---------------------------------------------------------------------------
-
-  getLap(carIdx) {
-    return this._state[carIdx]?.lap ?? 0;
+  disconnect(carId) {
+    const i = this.cars.findIndex(c => c.id === carId);
+    if (i < 0) return;
+    this.cars[i].disconnected = true;
+    this.cars[i].speed = 0;
+    this._state[i].disconnected = true;
+    this._rank();
+    this._checkComplete();
   }
 
-  getOrdinal(carIdx) {
-    return this._state[carIdx]?.ordinal ?? '';
+  _checkComplete() {
+    // AI may win, but a connected human must always be allowed to finish.
+    const humans = this.cars.filter(c => c.isHuman);
+    this.finished = humans.length > 0 && humans.every(c => c.finished || c.disconnected);
   }
 
-  getBestLap(carIdx) {
-    return this._state[carIdx]?.bestLapTime ?? null;
+  _rank() {
+    this.cars.map((car, i) => ({ car, s: this._state[i] })).sort((a, b) => {
+      if (a.s.finishSeq !== null || b.s.finishSeq !== null) return (a.s.finishSeq ?? Infinity) - (b.s.finishSeq ?? Infinity);
+      if (a.s.disconnected !== b.s.disconnected) return a.s.disconnected ? 1 : -1;
+      return (b.s.lap + b.s.progress) - (a.s.lap + a.s.progress) || a.car.id - b.car.id;
+    }).forEach(({ car }, i) => { car.position = i + 1; });
   }
 
-  getFinishTime(carIdx) {
-    return this._state[carIdx]?.finishTime ?? null;
-  }
-
-  /**
-   * Build results array for the end screen, sorted by finish position.
-   */
+  getLap(i) { return this._state[i]?.lap ?? 0; }
+  getOrdinal(i) { return ORDINALS[this.cars[i].position - 1]; }
+  getBestLap(i) { return this._state[i]?.bestLapTime ?? null; }
+  getFinishTime(i) { return this._state[i]?.finishTime ?? null; }
   getResults() {
-    return this.cars
-      .map((c, i) => ({
-        id:         i,
-        name:       c.id === 0 ? 'YOU' : `CPU ${i}`,
-        position:   c.position,
-        lap:        this._state[i].lap,
-        bestLap:    this._state[i].bestLapTime,
-        finishTime: this._state[i].finishTime,
-        finished:   this._state[i].finishTime !== null,
-      }))
-      .sort((a, b) => a.position - b.position);
+    return this.cars.map((c, i) => ({ id: c.id, name: c.name, isHuman: c.isHuman, position: c.position,
+      lap: this._state[i].lap, bestLap: this._state[i].bestLapTime, finishTime: this._state[i].finishTime,
+      status: c.finished ? 'finished' : c.disconnected ? 'disconnected' : 'unfinished', finished: c.finished,
+    })).sort((a, b) => a.position - b.position);
   }
 }
 
-// ---------------------------------------------------------------------------
-// Utility: format milliseconds as M:SS.mmm
-// ---------------------------------------------------------------------------
 export function formatTime(ms) {
   if (ms === null || ms === undefined) return '--:--.---';
-  const totalSec = ms / 1000;
-  const m    = Math.floor(totalSec / 60);
-  const s    = Math.floor(totalSec % 60);
-  const msec = Math.floor(ms % 1000);
-  return `${m}:${String(s).padStart(2, '0')}.${String(msec).padStart(3, '0')}`;
+  const value = Math.max(0, Math.floor(ms));
+  return `${Math.floor(value / 60000)}:${String(Math.floor(value / 1000) % 60).padStart(2, '0')}.${String(value % 1000).padStart(3, '0')}`;
 }

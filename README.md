@@ -1,247 +1,72 @@
-# 🏎️ GenerateRacer
+# GenerateRacer — Café Racing
 
-[![Deploy to GitHub Pages](https://github.com/commjoen/generatedracer/actions/workflows/deploy.yml/badge.svg)](https://github.com/commjoen/generatedracer/actions/workflows/deploy.yml)
-[![Release & Publish Docker Image](https://github.com/commjoen/generatedracer/actions/workflows/release.yml/badge.svg)](https://github.com/commjoen/generatedracer/actions/workflows/release.yml)
-[![Auto Release](https://github.com/commjoen/generatedracer/actions/workflows/auto-release.yml/badge.svg)](https://github.com/commjoen/generatedracer/actions/workflows/auto-release.yml)
-[![GitHub Stars](https://img.shields.io/github/stars/commjoen/generatedracer?style=social)](https://github.com/commjoen/generatedracer/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/commjoen/generatedracer?style=social)](https://github.com/commjoen/generatedracer/network/members)
-[![GitHub Watchers](https://img.shields.io/github/watchers/commjoen/generatedracer?style=social)](https://github.com/commjoen/generatedracer/watchers)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![GitHub last commit](https://img.shields.io/github/last-commit/commjoen/generatedracer)](https://github.com/commjoen/generatedracer/commits/main)
-[![GitHub issues](https://img.shields.io/github/issues/commjoen/generatedracer)](https://github.com/commjoen/generatedracer/issues)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/commjoen/generatedracer)](https://github.com/commjoen/generatedracer/pulls)
-[![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fcommjoen%2Fgeneratedracer-blue?logo=docker)](https://github.com/commjoen/generatedracer/pkgs/container/generatedracer)
+A mobile-first adaptation of [GenerateRacer](https://github.com/commjoen/generatedracer) by Jeroen Willemsen. Native JavaScript modules and Canvas 2D, no build step and no runtime dependencies in Phase 1.
 
-### 🌐 Share
+## Current milestone: Phase 1
 
-[![Share on Bluesky](https://img.shields.io/badge/Bluesky-Share-0085ff?logo=bluesky&logoColor=white)](https://bsky.app/intent/compose?text=Check%20out%20GenerateRacer%20%F0%9F%8F%8E%EF%B8%8F%20%E2%80%93%20a%20browser-based%20kart%20racing%20game!%20https%3A%2F%2Fcommjoen.github.io%2Fgeneratedracer%2F)
-[![Share on X/Twitter](https://img.shields.io/badge/X%2FTwitter-Share-000000?logo=x&logoColor=white)](https://twitter.com/intent/tweet?text=Check%20out%20GenerateRacer%20%F0%9F%8F%8E%EF%B8%8F%20%E2%80%93%20a%20browser-based%20kart%20racing%20game!&url=https%3A%2F%2Fcommjoen.github.io%2Fgeneratedracer%2F&hashtags=gamedev%2Cjavascript%2Ckart)
-[![Share on Facebook](https://img.shields.io/badge/Facebook-Share-1877f2?logo=facebook&logoColor=white)](https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fcommjoen.github.io%2Fgeneratedracer%2F)
-[![Share on LinkedIn](https://img.shields.io/badge/LinkedIn-Share-0a66c2?logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fcommjoen.github.io%2Fgeneratedracer%2F)
-[![Share on Mastodon](https://img.shields.io/badge/Mastodon-Share-6364ff?logo=mastodon&logoColor=white)](https://mastodon.social/share?text=Check%20out%20GenerateRacer%20%F0%9F%8F%8E%EF%B8%8F%20%E2%80%93%20a%20browser-based%20kart%20racing%20game!%20https%3A%2F%2Fcommjoen.github.io%2Fgeneratedracer%2F)
+- Solo racing with five AI opponents.
+- Optional two-human local keyboard splitscreen, with no AI filling empty slots.
+- Exactly three laps, ordered directional checkpoints, normal racing collisions.
+- One Turbo use per lap, maximum three; no stacking, pickups or timed recharge.
+- No weapons or weapon effects.
+- Touch steering, gas/brake, Turbo, responsive HUD and bounded canvas resolution.
+- Keyboard/gamepad support, local pause/resume and clean replay.
+- Every connected human can finish; an AI finishing first does not stop solo play.
+- No race time limit. In solo, results appear when the human finishes; AI not yet finished are labelled unfinished.
 
-A browser-based kart racing game – think Mario Kart meets Wacky Wheels,
-running entirely in your browser.  No installation, no account, no plugins.
+This is a local gameplay preview. Online racing is not offered yet. The old WebRTC module is retained for reference but is not loaded by the game. Its replacement, rooms, nickname entry and same-room rematches are subsequent milestones. No accounts, leaderboard, persistent storage, access enforcement or game server have been added.
 
-🟢 **[Play now on GitHub Pages](https://commjoen.github.io/generatedracer/)**
+## Preview and tests
 
----
+Node 22+ is sufficient; no `npm install` is needed.
 
-## Features
-
-| Feature | Details |
-|---|---|
-| 🏁 Single player | Race against **5 AI opponents** with rubber-banding difficulty |
-| 🌐 Online multiplayer | Peer-to-peer via **WebRTC** – exchange a short code with a friend, no server needed |
-| ⌨️ Keyboard | Arrow keys **or** WASD |
-| 📱 Touchscreen | On-screen D-pad (mobile & tablet) |
-| 🎮 Gamepad | Web Gamepad API – left stick, triggers, D-pad (covers Tesla MCU steering wheel) |
-| 🏆 Race format | 3 laps, 6 drivers, real-time positions & lap times |
-| 🐳 Docker | Run locally in one command |
-| ⭐ GitHub Stars | Star widget + live star count in the main menu |
-| 🔢 Versioning | `APP_VERSION` constant; version shown in the main menu |
-| 🔒 Security | Dependabot + Renovate for dependency updates; CSP-compatible static deployment |
-
----
-
-## How to play
-
-### Keyboard
-| Key | Action |
-|---|---|
-| ↑ / W | Accelerate |
-| ↓ / S | Brake / Reverse |
-| ← / A | Steer left |
-| → / D | Steer right |
-
-### Touch / Tesla
-Use the on-screen buttons (◀ ▶ ▲ ▼) that appear at the bottom of the screen
-on touch devices.  The Tesla MCU browser supports the **Gamepad API**,
-so any connected wheel maps automatically.
-
-### Gamepad
-- **Left stick X** – steer
-- **RT** – accelerate
-- **LT** – brake
-- **D-pad** – also works for steering and gas/brake
-
----
-
-## Online multiplayer
-
-No dedicated server is needed – connection is peer-to-peer (WebRTC).
-
-1. **Host** clicks *Host a Game* → copy the generated offer code
-2. **Host** sends the code to their friend (chat, text, etc.)
-3. **Guest** clicks *Join a Game* → pastes the offer code → click *Connect*
-4. **Guest** copies their answer code and sends it back to the host
-5. **Host** pastes the answer code → click *Accept Answer*
-6. The race starts automatically once connected
-
-> **Note:** WebRTC with STUN only works over most home networks.
-> If the connection fails, try a different network or use a VPN.
-
----
-
-## Local development
-
-The game is pure HTML5 + vanilla ES modules with **no build step**.
-Serve the repository root over HTTP (required for ES modules):
-
-```bash
-# Python 3
-python3 -m http.server 8080
-
-# Node.js (npx)
-npx serve .
+```sh
+npm start
+npm test
 ```
 
-Then open <http://localhost:8080>.
+The static preview listens at http://127.0.0.1:8081 by default. `HOST` and `PORT` can override its bind address for deliberate local-network testing. It is a development server, not the future authoritative multiplayer server. It only serves the game's static files and license.
 
----
+The engineering agent starts the preview when working on this project; users can open the supplied link directly without running commands.
 
-## 🐳 Docker
+## Controls
 
-Run the game locally in a single command – no Python or Node.js required:
+| Input | Drive | Turbo |
+| --- | --- | --- |
+| Touch | Hold left/right, accelerate, brake/reverse | Tap TURBO; one use per lap |
+| Keyboard solo | Arrows or WASD | E or L |
+| Local split P1 | WASD | E |
+| Local split P2 | Arrows | L |
+| Gamepad, solo/P1 | Stick or D-pad, RT/LT or D-pad gas/brake | A |
 
-```bash
-# Pull and run the latest image from GitHub Container Registry
-docker run -p 8080:80 ghcr.io/commjoen/generatedracer:latest
-```
+Brake overrides gas. Pointer capture keeps simultaneous controls independent and clears them on cancel/release. Local play pauses on app switch/blur; Resume continues the same local race. Escape also pauses/resumes. Online interruption behavior will be server-controlled in Phase 2, not a pause of the entire room.
 
-Then open <http://localhost:8080>.
+## Source layout
 
-### Build & run locally with Docker Compose
+- `js/main.js`: browser lifecycle, countdown, menus and Canvas rendering.
+- `js/simulation.js`: local car roster and physics/AI/race orchestration, no DOM.
+- `js/car.js`, `js/track.js`, `js/ai.js`: reused and adjusted physics, drawing, spline track and AI.
+- `js/race.js`: ordered directional gates, simulation clock, laps, finish ordering and results.
+- `js/input.js`, `js/hud.js`: controls and responsive feedback.
+- `tests/`: Node built-in test suite; no test framework dependency.
+- `tools/serve.mjs`: development static server only.
+- `js/network.js`, `js/lib/qrcode.js`: legacy networking/QR reference, not loaded in this preview.
 
-```bash
-git clone https://github.com/commjoen/generatedracer.git
-cd generatedracer
-docker compose up
-```
+## Documentation
 
-Then open <http://localhost:8080>.
+- [Fresh project audit](docs/PROJECT_AUDIT.md)
+- [Confirmed MVP roadmap](docs/MVP_ROADMAP.md)
+- [Phase 1 verification report](docs/PHASE_1_REPORT.md)
+- [Phase 2 networking proposal](docs/NETWORK_ARCHITECTURE.md)
 
----
+The confirmed MVP will have public/private rooms, anonymous nicknames, 1–6 humans, a unified lobby, explicit solo start, multiplayer readiness, locked active races and same-room rematches. Multiplayer races with 2–6 humans never receive AI. Future features such as accounts, statistics, rewards and leaderboards are outside MVP.
 
-## Deployment
+## Packaging and release
 
-### GitHub Pages
+Existing nginx Docker/Compose and GitHub workflows are retained. Docker now copies the unchanged MIT license into the static distribution. Container build verification requires a running Docker engine. Public deployment, paid hosting and automatic pushes to main are not authorized. The old workflows can publish on main/tag pushes; review pilot release gates before using them.
 
-The repository is configured to **auto-deploy to GitHub Pages** on every push
-to `main` via `.github/workflows/deploy.yml`.
+## Attribution and license
 
-Go to **Settings → Pages → Source → GitHub Actions** to enable it.
-
-### Auto Release (on merge to `main`)
-
-Every merge to `main` automatically triggers `.github/workflows/auto-release.yml`, which:
-
-1. Reads the current `APP_VERSION` from `js/constants.js`
-2. Bumps the **patch** version (e.g. `1.0.0` → `1.0.1`)
-3. Commits the version bump back to `main` — the workflow skips itself when the commit message starts with `chore: bump version to` to prevent infinite loops
-4. Creates a git tag (`v1.0.1`)
-5. Builds and pushes the Docker image to **GitHub Container Registry** (`ghcr.io/commjoen/generatedracer`)
-   with tags `latest`, `1`, `1.0`, and `1.0.1`
-6. Creates a **GitHub Release** with auto-generated release notes
-
-### Manual / Tag-based Releases
-
-Pushing a tag in the form `v1.2.3` (or triggering the release workflow manually) will:
-
-1. Build the Docker image
-2. Push it to **GitHub Container Registry** (`ghcr.io/commjoen/generatedracer`)
-   with tags `latest`, `1`, `1.2`, and `1.2.3`
-3. Create a **GitHub Release** with auto-generated release notes
-
-```bash
-# Tag and push a manual release
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-### PR Preview Containers
-
-Every pull request automatically builds and pushes a preview Docker image:
-
-- **Image tag**: `ghcr.io/commjoen/generatedracer:pr-<PR-number>`
-- A comment is posted (and kept up to date) on the PR with `docker run` instructions
-
-**To run a PR preview locally:**
-
-```bash
-# Authenticate with GitHub Container Registry (one-time setup)
-echo "<YOUR_GITHUB_PAT>" | docker login ghcr.io -u <YOUR_GITHUB_USERNAME> --password-stdin
-
-# Pull and run the preview image (replace 42 with the actual PR number)
-docker run -p 8080:80 ghcr.io/commjoen/generatedracer:pr-42
-```
-
-Then open <http://localhost:8080>.
-
----
-
-## Versioning
-
-The current version is declared in `js/constants.js`:
-
-```js
-export const APP_VERSION = '1.0.0';
-export const REPO_URL    = 'https://github.com/commjoen/generatedracer';
-```
-
-The version is displayed in the bottom of the main menu and in every
-Docker image tag.  Bump `APP_VERSION` before tagging a new release.
-
----
-
-## Security & maintenance
-
-| Tool | Purpose |
-|---|---|
-| **Dependabot** | Keeps GitHub Actions up to date (`.github/dependabot.yml`) |
-| **Renovate** | Auto-merges minor/patch dependency bumps (`renovate.json`) |
-| No npm dependencies | Zero supply-chain attack surface for the game itself |
-
----
-
-## Architecture
-
-```
-index.html          Main page, canvas, menus, touch controls
-game.css            Responsive styles (mobile, tablet, Tesla, desktop)
-js/
-  constants.js      Tunable game constants (incl. APP_VERSION, REPO_URL)
-  track.js          Catmull-Rom spline track, rendering, collision
-  car.js            Car class – arcade physics, drawing
-  ai.js             AI controller – waypoint following + rubber-banding
-  input.js          Unified input (keyboard / touch / Gamepad API)
-  race.js           Lap counting, positions, timing
-  hud.js            HUD DOM updates
-  network.js        WebRTC peer-to-peer multiplayer
-  main.js           Game loop, state machine, wiring
-Dockerfile          nginx-based container image for local / self-hosted use
-docker-compose.yml  One-command local run
-.github/
-  workflows/deploy.yml        GitHub Pages deployment
-  workflows/release.yml       Automated releases + ghcr.io Docker image push (tag-triggered)
-  workflows/auto-release.yml  Auto release on every merge to main (patch version bump)
-  workflows/preview.yml       PR preview containers with usage instructions comment
-  dependabot.yml              Dependency update automation
-renovate.json             Renovate bot configuration
-```
-
----
-
-## 📊 Repository Stats
-
-![GitHub repo size](https://img.shields.io/github/repo-size/commjoen/generatedracer)
-![GitHub code size](https://img.shields.io/github/languages/code-size/commjoen/generatedracer)
-![GitHub commit activity](https://img.shields.io/github/commit-activity/m/commjoen/generatedracer)
-![GitHub contributors](https://img.shields.io/github/contributors/commjoen/generatedracer)
-![GitHub top language](https://img.shields.io/github/languages/top/commjoen/generatedracer)
-
----
-
-## License
-
-[MIT](LICENSE)
+Original project: [commjoen/generatedracer](https://github.com/commjoen/generatedracer).
+Original copyright: **Copyright (c) 2026 Jeroen Willemsen**.
+This adaptation remains under the [MIT license](LICENSE). Retain that full notice and the bundled QR code's MIT header in distributions.

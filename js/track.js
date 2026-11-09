@@ -88,7 +88,9 @@ export const SPLINE_DIST = (() => {
   return d;
 })();
 
-export const TRACK_LENGTH = SPLINE_DIST[SPLINE_DIST.length - 1];
+export const TRACK_LENGTH = SPLINE_DIST[SPLINE_DIST.length - 1]
+  + Math.hypot(SPLINE_POINTS.at(-1).x - SPLINE_POINTS[0].x,
+    SPLINE_POINTS.at(-1).y - SPLINE_POINTS[0].y);
 
 // ---------------------------------------------------------------------------
 // Checkpoint indices (evenly spaced along the spline, used for lap counting)

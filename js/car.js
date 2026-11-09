@@ -9,26 +9,29 @@
  */
 
 import {
-  CAR_LENGTH, CAR_WIDTH,
+  CAR_LENGTH, CAR_WIDTH, NUM_LAPS,
   MAX_SPEED, MAX_REVERSE_SPEED,
   ACCELERATION, BRAKING, COAST_FRICTION,
   TURN_RATE,
   OFFTRACK_SPEED_CAP, OFFTRACK_FRICTION_MULT,
   CAR_COLORS,
-  TURBO_DURATION, TURBO_COOLDOWN, TURBO_SPEED_MULT,
+  TURBO_DURATION, TURBO_SPEED_MULT,
   TURBO_FLAME_BASE, TURBO_FLAME_RAND,
 } from './constants.js';
 import { isOnTrack } from './track.js';
 
 export class Car {
   /**
-   * @param {number} id        – 0 = human player, 1-5 = AI
+   * @param {number} id        – race-local slot; ownership is explicit in isHuman
    * @param {number} x         – initial world x
    * @param {number} y         – initial world y
    * @param {number} angle     – initial heading (radians)
    */
-  constructor(id, x, y, angle = 0) {
+  constructor(id, x, y, angle = 0, { isHuman = true, name = 'YOU' } = {}) {
     this.id    = id;
+    this.isHuman = isHuman;
+    this.name = name;
+    this.disconnected = false;
     this.color = CAR_COLORS[id % CAR_COLORS.length];
 
     // World-space state
@@ -38,16 +41,14 @@ export class Car {
     this.speed = 0;   // scalar forward speed (negative = reversing)
 
     // Input snapshot (filled each frame by player-input or AI)
-    this.input = { gas: 0, brake: 0, steer: 0, turbo: false, shoot: false };
+    this.input = { gas: 0, brake: 0, steer: 0, turbo: false };
 
     // Turbo boost
     this.turboActive   = false;
     this.turboTimer    = 0;
-    this.turboCooldown = 0;
-
-    // Combat
-    this.stunTimer     = 0;
-    this.shootCooldown = 0;
+    this.turboAvailable = true;
+    this.turboUses = 0;
+    this._turboHeld = false;
 
     // Race state (managed by race.js)
     this.lap               = 0;
@@ -61,33 +62,29 @@ export class Car {
 
   /** Advance physics by `dt` seconds. */
   update(dt) {
+    if (this.finished || this.disconnected) { this.speed = 0; return; }
     const onTrack = isOnTrack(this.x, this.y);
 
-    // ---- Timers --------------------------------------------------------------
-    if (this.stunTimer     > 0) this.stunTimer     = Math.max(0, this.stunTimer     - dt);
-    if (this.shootCooldown > 0) this.shootCooldown = Math.max(0, this.shootCooldown - dt);
-
     // ---- Turbo ---------------------------------------------------------------
-    if (this.input.turbo && !this.turboActive && this.turboCooldown <= 0) {
+    if (this.input.turbo && !this._turboHeld && this.turboAvailable) {
       this.turboActive   = true;
       this.turboTimer    = TURBO_DURATION;
-      this.turboCooldown = TURBO_COOLDOWN;
+      this.turboAvailable = false;
+      this.turboUses++;
     }
+    this._turboHeld = Boolean(this.input.turbo);
     if (this.turboActive) {
       this.turboTimer = Math.max(0, this.turboTimer - dt);
       if (this.turboTimer <= 0) this.turboActive = false;
     }
-    if (this.turboCooldown > 0) this.turboCooldown = Math.max(0, this.turboCooldown - dt);
 
     // ---- Speed / acceleration ------------------------------------------------
     const frictionMult = onTrack ? 1 : OFFTRACK_FRICTION_MULT;
     const friction     = COAST_FRICTION * frictionMult;
-    const isStunned    = this.stunTimer > 0;
-
-    if (!isStunned && this.input.gas > 0) {
-      this.speed += ACCELERATION * this.input.gas * dt;
-    } else if (!isStunned && this.input.brake > 0) {
+    if (this.input.brake > 0) {
       this.speed -= BRAKING * this.input.brake * dt;
+    } else if (this.input.gas > 0) {
+      this.speed += ACCELERATION * this.input.gas * dt;
     }
 
     // Coast friction always opposes motion
@@ -108,20 +105,25 @@ export class Car {
     // Turn rate scales with |speed| / MAX_SPEED so it feels snappy at all speeds
     const speedFraction = Math.abs(this.speed) / MAX_SPEED;
     const effectiveTurn = TURN_RATE * speedFraction * Math.sign(this.speed);
-    if (!isStunned) {
-      this.angle += this.input.steer * effectiveTurn * dt;
-    }
+    this.angle += this.input.steer * effectiveTurn * dt;
 
     // ---- Position update -----------------------------------------------------
     this.x += Math.cos(this.angle) * this.speed * dt;
     this.y += Math.sin(this.angle) * this.speed * dt;
   }
 
+  /** Discard the previous lap's boost; holding the button cannot spend the new one. */
+  beginLap(lap) {
+    this.lap = lap;
+    this.turboActive = false;
+    this.turboTimer = 0;
+    this.turboAvailable = !this.finished && lap < NUM_LAPS;
+  }
+
   /** Draw the car onto `ctx` (world-space context).
    * @param {CanvasRenderingContext2D} ctx
-   * @param {number} [now] – current timestamp ms (performance.now()); pass once per frame
    */
-  draw(ctx, now = performance.now()) {
+  draw(ctx) {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
@@ -170,19 +172,6 @@ export class Car {
     ctx.fillRect(-hl + 1, -hw * 0.65, 5, 4);
     ctx.fillRect(-hl + 1,  hw * 0.25, 5, 4);
 
-    // Stun flash overlay
-    if (this.stunTimer > 0) {
-      const alpha = 0.35 + 0.3 * Math.sin(now * 0.02);
-      ctx.fillStyle = `rgba(255,255,0,${alpha.toFixed(2)})`;
-      ctx.beginPath();
-      if (ctx.roundRect) {
-        ctx.roundRect(-hl, -hw, CAR_LENGTH, CAR_WIDTH, 5);
-      } else {
-        ctx.rect(-hl, -hw, CAR_LENGTH, CAR_WIDTH);
-      }
-      ctx.fill();
-    }
-
     ctx.restore();
   }
 
@@ -214,6 +203,7 @@ export class Car {
 const COLLISION_RADIUS = (Math.max(CAR_LENGTH, CAR_WIDTH) / 2) * 1.1;
 
 export function resolveCarCollision(a, b) {
+  if (a.finished || b.finished || a.disconnected || b.disconnected) return;
   const dx  = b.x - a.x;
   const dy  = b.y - a.y;
   const distSq = dx * dx + dy * dy;

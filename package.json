@@ -1,0 +1,12 @@
+{
+  "name": "generatedracer-cafe",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=22" }
+}

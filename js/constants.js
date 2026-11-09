@@ -1,6 +1,6 @@
 // Game constants
 
-export const APP_VERSION = '1.0.7';
+export const APP_VERSION = '1.1.0';
 export const REPO_URL    = 'https://github.com/commjoen/generatedracer';
 
 export const WORLD_W = 3000;
@@ -44,7 +44,7 @@ export const OFFTRACK_SPEED_CAP     = 0.55;  // fraction of MAX_SPEED when on gr
 export const OFFTRACK_FRICTION_MULT = 3.5;   // extra friction multiplier on grass
 
 // AI
-export const AI_LOOK_AHEAD  = 3;   // control-points ahead to target
+export const AI_LOOK_AHEAD  = 12;  // spline samples ahead to target
 export const AI_STEER_GAIN  = 2.5; // proportional steering gain
 // Per-AI speed fractions (index 0 unused – that is the player)
 export const AI_SPEED_FACTORS = [1, 0.88, 0.91, 0.93, 0.86, 0.89];
@@ -65,16 +65,9 @@ export const NET_TICK_MS = 50;  // 20 Hz state broadcast
 
 // Turbo boost
 export const TURBO_DURATION   = 2.5;  // seconds active
-export const TURBO_COOLDOWN   = 8.0;  // seconds cooldown
 export const TURBO_SPEED_MULT = 1.6;  // speed multiplier when boosting
-
-// Projectiles
-export const PROJECTILE_SPEED        = 900;   // px/s
-export const PROJECTILE_MAX_DIST     = 1400;  // px before despawn
-export const PROJECTILE_HIT_RADIUS   = 28;    // px
-export const PROJECTILE_STUN_TIME    = 1.5;   // seconds stunned
-export const PROJECTILE_COOLDOWN     = 2.5;   // seconds between shots
-export const PROJECTILE_SPAWN_OFFSET = 8;     // px beyond car nose for spawn
+// One use is granted at the start of each of the three laps, never by a timer.
+export const SIMULATION_STEP = 1 / 60;
 
 // Turbo flame visual
 export const TURBO_FLAME_BASE = 22;  // base flame length (px)
