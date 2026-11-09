@@ -102,6 +102,12 @@ export class Game {
     this.publish(r); this.publicLists();
   }
 
+  cancel(s) {
+    const r = this.room(s);
+    if (r.phase !== 'countdown') throw new Error('There is no countdown to cancel.');
+    this.rosterChanged(r); this.publicLists();
+  }
+
   begin(r) {
     if (r.phase !== 'countdown' || r.revision !== r.startRevision || !r.members.size ||
         (r.members.size > 1 && ![...r.members.values()].every(m => m.ready))) return;

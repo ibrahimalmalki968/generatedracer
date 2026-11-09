@@ -70,3 +70,30 @@ body.splitscreen .split-hint { display: inline; }
 @media (max-height: 440px) { .panel { padding: 20px; } .hud-top { padding-top: max(6px, env(safe-area-inset-top)); } .hud-pill { padding: 5px 10px; } .hud-pill strong { font-size: 17px; } #raceToolbar { top: calc(70px + env(safe-area-inset-top)); } #raceStatus { top: calc(74px + env(safe-area-inset-top)); } .turbo-btn { min-height: 52px; bottom: calc(96px + env(safe-area-inset-bottom)); } .touch-btn { width: 58px; height: 58px; } #touchControls { padding-bottom: max(12px, env(safe-area-inset-bottom)); } }
 @media (max-width: 350px) { .panel { padding: 20px; } .hud-pill { padding: 6px; } .hud-top { gap: 5px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
+/* Room/lobby surfaces reuse the Phase 1 arcade palette and panel layout. */
+label { display: block; margin: 12px 0 6px; color: #c7d2c9; font-size: 13px; }
+input, select { display: block; width: 100%; min-height: 48px; margin: 0 0 12px; padding: 12px; border: 1px solid #4d6152; border-radius: 10px; background: #1c2921; color: #f6f8ee; font: inherit; font-size: 16px; }
+input[readonly] { font-size: 12px; }
+button:disabled { opacity: .45; cursor: default; }
+.wide-panel { max-width: 540px; }
+h3 { font-size: 16px; margin: 0; }
+.section-title { display: flex; align-items: center; justify-content: space-between; margin: 14px 0; }
+.text-btn { min-height: 44px; padding: 8px 12px; border-radius: 8px; background: #26392b; color: #d9f2c9; }
+.plain-list { list-style: none; margin: 12px 0 18px; padding: 0; }
+.room-row, .player-row { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #ffffff20; }
+.room-row > div { min-width: 0; }
+.room-row strong, .room-row small { display: block; overflow-wrap: anywhere; }
+.room-row strong { font-size: 14px; }
+.room-row small { font-size: 11px; color: #b1c1ac; margin-top: 5px; }
+.room-row .small { width: auto; min-width: 64px; margin: 0; }
+.player-row { font-size: 13px; overflow-wrap: anywhere; }
+.player-row > span { min-width: 0; }
+.player-row > strong { flex-shrink: 0; font-size: 11px; color: #a3b59f; }
+.player-row .ready-label { color: var(--accent); }
+#roomBrowser details, #lobbyScreen details, #mainMenu details { border-top: 1px solid #ffffff20; padding-top: 12px; margin-top: 14px; }
+.connection { position: fixed; z-index: 8; top: max(4px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); background: #14271deb; color: #cbe4b9; padding: 3px 9px; border-radius: 8px; max-width: calc(100% - 24px); font-size: 10px; text-align: center; pointer-events: none; }
+.connection.offline { background: #63332a; color: #fff; }
+.app-message { position: fixed; z-index: 20; bottom: max(16px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); max-width: min(460px, calc(100% - 24px)); padding: 12px 16px; border: 1px solid #d8ef93; border-radius: 12px; background: #202c20; color: #f2ffdc; font-size: 13px; }
+.countdown-cancel { position: fixed; z-index: 3; bottom: calc(22px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: 180px; }
+#connectionStatus:not(.offline) { opacity: .8; }
+#nicknameForm .btn { margin-top: 8px; }

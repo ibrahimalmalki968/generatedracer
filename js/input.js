@@ -74,7 +74,9 @@ export class InputHandler {
   pollGamepad() {
     this._gamepad = {};
     if (!this.enabled || this.keySet === 'arrows') return;
-    const gp = [...(navigator.getGamepads?.() || [])].find(Boolean);
+    let gp;
+    try { gp = [...(navigator.getGamepads?.() || [])].find(Boolean); }
+    catch { return; } // A denied Gamepad API must not stop touch/keyboard racing.
     if (!gp) { this._gamepadWasTurbo = false; return; }
     const pressed = i => Boolean(gp.buttons[i]?.pressed);
     const axis = gp.axes[0] || 0;

@@ -47,6 +47,7 @@ export async function createGameServer({ host = '127.0.0.1', port = 0, countdown
         else if (m.type === 'list') game.list(ws);
         else if (m.type === 'start') game.start(s);
         else if (m.type === 'ready') game.ready(s, m.ready);
+        else if (m.type === 'cancel') game.cancel(s);
         else if (m.type === 'input') game.input(s, m);
         else if (m.type === 'leave') game.leave(s);
         else if (m.type === 'back') game.back(s, m.raceId);

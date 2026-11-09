@@ -41,23 +41,45 @@
   <div id="keyHint" class="hidden" aria-hidden="true">WASD / arrows to drive · E / L Turbo · Esc pause <span class="split-hint"> · P1 WASD + E · P2 arrows + L</span></div>
   <p id="raceStatus" class="hidden" role="status"></p>
   <div id="countdown" class="hidden" aria-live="assertive"><span id="countdownNum">3</span></div>
+  <button id="btn-cancel-countdown" class="hidden btn secondary countdown-cancel">Cancel start</button>
 
+  <div id="connectionStatus" class="connection hidden" role="status">Connecting…</div>
+  <div id="appMessage" class="app-message hidden" role="alert"></div>
   <main id="mainMenu" class="overlay">
     <section class="panel" aria-labelledby="menuTitle">
-      <p class="eyebrow">CAFÉ RACING / PHASE 1</p>
-      <h1 id="menuTitle">Generate<span>Racer</span></h1>
-      <p class="subtitle">Three laps. One Turbo per lap.<br />Make every overtake count.</p>
-      <button id="btn-single" class="btn primary">Start solo race <span>→</span></button>
-      <p class="help">You + 5 AI opponents. No race time limit.</p>
-      <button id="btn-splitscreen" class="btn secondary">Local 2-player splitscreen</button>
-      <p class="help">Shared keyboard · two human racers · no AI</p>
-      <div class="up-next">Online rooms are coming in the next milestones.</div>
-      <details><summary>How to drive</summary><p>Hold ▲ to accelerate and ◀ ▶ to steer. Hold ▼ to brake or reverse. Tap TURBO once per lap. On a keyboard use arrows or WASD, and E or L for Turbo. Gamepad: stick/D-pad, triggers and A for Turbo.</p></details>
+      <p class="eyebrow">CAFÉ RACING</p><h1 id="menuTitle">Generate<span>Racer</span></h1>
+      <p class="subtitle">Three laps. One Turbo per lap.<br />Race together, right in your browser.</p>
+      <form id="nicknameForm"><label for="nickname">Your nickname</label>
+        <input id="nickname" name="nickname" maxlength="40" autocomplete="nickname" placeholder="What should we call you?" required />
+        <button class="btn primary" type="submit">Continue →</button>
+      </form><p id="entryHint" class="help">No account. Just a nickname and a race.</p>
+      <details><summary>Local keyboard splitscreen</summary><p>Two people on one keyboard. P1 uses WASD + E; P2 uses arrows + L.</p><button id="btn-splitscreen" class="btn secondary">Start local splitscreen</button></details>
+      <details><summary>How to drive</summary><p>Hold ▲ to accelerate and ◀ ▶ to steer. Hold ▼ to brake or reverse. Tap TURBO once per lap. Keyboard: arrows/WASD, E/L Turbo. Gamepad: stick/D-pad, triggers and A for Turbo.</p></details>
       <footer><a href="https://github.com/commjoen/generatedracer" target="_blank" rel="noopener noreferrer">Based on GenerateRacer by Jeroen Willemsen</a><a href="LICENSE" target="_blank" rel="noopener">MIT license</a><p id="menu-version"></p></footer>
     </section>
   </main>
+  <div id="roomBrowser" class="overlay hidden"><section class="panel wide-panel" aria-labelledby="browserTitle">
+    <p class="eyebrow" id="playerGreeting">WELCOME</p><h2 id="browserTitle">Find your race</h2>
+    <div class="section-title"><h3>Public rooms</h3><button id="btn-refresh" class="text-btn">Refresh</button></div>
+    <ul id="publicRooms" class="plain-list" aria-label="Public rooms"></ul>
+    <details><summary>Create a room</summary><form id="createForm">
+      <label for="roomName">Room name</label><input id="roomName" maxlength="32" placeholder="Our table's race" />
+      <label for="roomPrivacy">Room visibility</label><select id="roomPrivacy"><option value="public">Public — listed for everyone</option><option value="private">Private — code or invitation only</option></select>
+      <button class="btn primary" type="submit">Create Room</button></form></details>
+    <details><summary>Join with a room code</summary><form id="joinForm"><label for="roomCode">Room code</label>
+      <input id="roomCode" maxlength="10" autocomplete="off" autocapitalize="characters" placeholder="10-character code" required />
+      <button class="btn secondary" type="submit">Join Room</button></form></details>
+    <p class="help">1–6 humans · 3 laps · no weapons · no race time limit</p>
+  </section></div>
+  <div id="lobbyScreen" class="overlay hidden"><section class="panel" aria-labelledby="lobbyName">
+    <p class="eyebrow">PRE-RACE LOBBY</p><h2 id="lobbyName">Race room</h2><p id="lobbyInfo" class="help"></p>
+    <ul id="lobbyPlayers" class="plain-list" aria-label="Players in room"></ul>
+    <p id="lobbyHint" class="help"></p><button id="btn-room-start" class="btn primary">Start Race</button>
+    <details><summary>Invite a friend · <span id="lobbyCode"></span></summary><label for="inviteLink">Invitation link</label><input id="inviteLink" readonly /><button id="btn-invite" class="btn secondary">Copy invitation link</button></details>
+    <button id="btn-lobby-leave" class="btn secondary">Leave room</button>
+  </section></div>
   <div id="pauseMenu" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
-    <section class="panel"><p class="eyebrow">TAKE A BREATHER</p><h2 id="pauseTitle">Race paused</h2><p class="subtitle">Your local race is waiting for you.</p><button id="btn-resume" class="btn primary">Resume race</button><button id="btn-leave" class="btn secondary">Leave race</button></section>
+    <section class="panel"><p class="eyebrow">TAKE A BREATHER</p><h2 id="pauseTitle">Race paused</h2><p id="pauseDescription" class="subtitle">Your local race is waiting for you.</p><button id="btn-resume" class="btn primary">Resume race</button><button id="btn-leave" class="btn secondary">Leave race</button></section>
   </div>
   <div id="raceOver" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="resultsTitle">
     <section class="panel results-panel"><p class="eyebrow">CHEQUERED FLAG</p><h2 id="resultsTitle">Race results</h2><ol id="results" aria-label="Finishing positions"></ol><button id="btn-restart" class="btn primary">Race again</button><button id="btn-menu" class="btn secondary">Main menu</button></section>

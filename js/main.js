@@ -5,6 +5,9 @@ import { Hud } from './hud.js';
 import { drawTrack } from './track.js';
 import { formatTime } from './race.js';
 import { APP_VERSION, SIMULATION_STEP } from './constants.js';
+import { Network } from './network.js';
+import { LobbyUI } from './lobby.js';
+import { Car } from './car.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -13,6 +16,10 @@ const inputP1 = new InputHandler('wasd');
 const inputP2 = new InputHandler('arrows');
 const handlers = [input, inputP1, inputP2];
 const hud = new Hud('hud'), hud2 = new Hud('hud2');
+const network = new Network();
+const lobby = new LobbyUI(network);
+let online = false;
+const drawingCars = new Map();
 let session = null;
 let state = 'menu';
 let pausedState = 'racing';
@@ -22,7 +29,7 @@ let lastTimestamp = null;
 let width = 0, height = 0, pixelRatio = 1;
 let cameras = [];
 let renderDirty = true;
-const activeInputs = () => session?.humans === 2 ? [inputP1, inputP2] : [input];
+const activeInputs = () => !online && session?.humans === 2 ? [inputP1, inputP2] : [input];
 
 for (const [id, action] of [['btn-left', 'left'], ['btn-right', 'right'], ['btn-gas', 'gas'], ['btn-brake', 'brake']]) {
   input.bindButton(document.getElementById(id), action);
@@ -53,9 +60,9 @@ function setInputs(enabled) {
 function syncScreens() {
   renderDirty = true;
   const playing = state === 'racing' || state === 'countdown';
-  const split = session?.humans === 2;
+  const split = !online && session?.humans === 2;
   document.body.classList.toggle('splitscreen', Boolean(split && playing));
-  show('mainMenu', state === 'menu');
+  lobby.view(state);
   show('raceOver', state === 'finished');
   show('pauseMenu', state === 'paused');
   show('hud', playing);
@@ -64,10 +71,15 @@ function syncScreens() {
   show('keyHint', playing);
   show('touchControls', playing && !split);
   show('countdown', state === 'countdown');
+  show('btn-cancel-countdown', online && state === 'countdown');
   show('raceStatus', playing && session?.cars.some(c => c.finished));
 }
 
 function start(humans) {
+  online = false;
+  document.getElementById('btn-pause').textContent = 'Ⅱ Pause';
+  document.getElementById('btn-restart').textContent = 'Race again';
+  document.getElementById('btn-menu').textContent = 'Main menu';
   setInputs(false);
   session = new LocalSession(humans);
   cameras = session.cars.slice(0, humans).map(c => ({ x: c.x, y: c.y }));
@@ -84,10 +96,13 @@ function start(humans) {
 function pause() {
   if (!['racing', 'countdown'].includes(state)) return;
   pausedState = state;
+  if (online) network.neutral();
   state = 'paused';
   accumulator = 0;
   setInputs(false);
   syncScreens();
+  document.getElementById('pauseTitle').textContent = online ? 'Race continues' : 'Race paused';
+  document.getElementById('pauseDescription').textContent = online ? 'Other racers keep driving. Resume to continue, or leave and record DNF.' : 'Your local race is waiting for you.';
   document.getElementById('btn-resume').focus();
 }
 function resume() {
@@ -98,13 +113,15 @@ function resume() {
   syncScreens();
 }
 function menu() {
-  state = 'menu';
+  if (online && network.room) { setInputs(false); network.neutral(); lobby.action('leave'); return; }
+  state = network.ready ? 'browser' : 'menu';
+  online = false;
   setInputs(false);
   session = null;
   cameras = [];
   accumulator = 0;
   syncScreens();
-  document.getElementById('btn-single').focus();
+  if (state === 'menu') document.getElementById('nickname').focus();
 }
 function finish() {
   state = 'finished';
@@ -124,10 +141,71 @@ function finish() {
   document.getElementById('btn-restart').focus();
 }
 
+function onlineScene() {
+  if (!network.latest) return;
+  const cars = network.displayCars().map(s => {
+    let car = drawingCars.get(s.id);
+    if (!car) { car = new Car(s.id, s.x, s.y, s.angle); drawingCars.set(s.id, car); }
+    Object.assign(car, s); return car;
+  });
+  const race = {
+    elapsed: network.latest.elapsed,
+    getOrdinal: id => ['1st', '2nd', '3rd', '4th', '5th', '6th'][network.latest.cars[id]?.position - 1],
+    getBestLap: id => network.latest.cars[id]?.bestLap,
+    getFinishTime: id => network.latest.cars[id]?.finishTime,
+    getResults: () => network.room?.results || [],
+  };
+  session = { cars, race, humans: 1 };
+  const own = cars.find(c => c.participantId === network.playerId);
+  const target = own?.finished ? cars.find(c => c.isHuman && !c.finished && !c.disconnected) || own : own;
+  if (target) {
+    if (!cameras.length) cameras = [{ x: target.x, y: target.y, carId: target.id }];
+    cameras[0].carId = target.id;
+    hud.update(own, race);
+  }
+}
+
+network.addEventListener('welcome', () => {
+  if (!network.room) { online = false; session = null; cameras = []; state = 'browser'; setInputs(false); syncScreens(); }
+});
+network.addEventListener('room', e => {
+  online = true;
+  const room = e.detail;
+  if (room.phase === 'lobby') {
+    state = 'lobby'; session = null; cameras = []; drawingCars.clear(); setInputs(false);
+  } else if (room.phase === 'countdown') {
+    state = 'countdown'; session = null; cameras = []; drawingCars.clear(); accumulator = 0; setInputs(false);
+  } else if (room.phase === 'racing') {
+    if (state !== 'racing') { accumulator = 0; setInputs(true); }
+    state = 'racing';
+  } else if (room.phase === 'results') {
+    onlineScene();
+    if (session) finish();
+  }
+  document.getElementById('btn-pause').textContent = online ? 'Leave / resume' : 'Ⅱ Pause';
+  document.getElementById('btn-restart').textContent = online ? 'Return room to lobby' : 'Race again';
+  document.getElementById('btn-menu').textContent = online ? 'Leave room' : 'Main menu';
+  syncScreens();
+});
+network.addEventListener('left', () => { online = false; session = null; cameras = []; drawingCars.clear(); state = 'browser'; setInputs(false); syncScreens(); });
+network.addEventListener('disconnected', () => {
+  online = false; session = null; cameras = []; drawingCars.clear(); state = 'menu'; setInputs(false); syncScreens();
+  lobby.message('Connection lost. Your previous race continues; a closed connection is recorded as DNF.');
+});
+
 function loop(ts) {
   const dt = lastTimestamp === null ? 0 : Math.min((ts - lastTimestamp) / 1000, 0.25);
   lastTimestamp = ts;
-  if (state === 'countdown') {
+  if (online && network.latest) onlineScene();
+  if (online && state === 'countdown') {
+    document.getElementById('countdownNum').textContent = String(Math.max(1, Math.ceil((network.room.startAt - Date.now() - network.offset) / 1000)));
+  } else if (online && state === 'racing') {
+    input.pollGamepad(); accumulator += dt;
+    while (accumulator >= SIMULATION_STEP) { network.predict(input.get()); accumulator -= SIMULATION_STEP; }
+    const finished = network.latest?.cars.filter(c => c.finished) || [];
+    show('raceStatus', finished.length > 0);
+    if (finished.length) document.getElementById('raceStatus').textContent = `${finished.map(c => c.name).join(', ')} finished. Waiting for remaining racers.`;
+  } else if (state === 'countdown') {
     countdown -= dt;
     document.getElementById('countdownNum').textContent = String(Math.max(1, Math.ceil(countdown)));
     if (countdown <= 0) {
@@ -155,7 +233,7 @@ function loop(ts) {
 }
 
 function renderViewport(camera, offset, viewWidth, dt) {
-  const car = session.cars[cameras.indexOf(camera)];
+  const car = session.cars[camera.carId ?? cameras.indexOf(camera)];
   const lerp = 1 - Math.exp(-8 * dt);
   camera.x += (car.x - camera.x) * lerp;
   camera.y += (car.y - camera.y) * lerp;
@@ -190,17 +268,18 @@ function render(dt) {
   }
 }
 
-document.getElementById('btn-single').addEventListener('click', () => start(1));
 document.getElementById('btn-splitscreen').addEventListener('click', () => start(2));
-document.getElementById('btn-restart').addEventListener('click', () => start(session.humans));
+document.getElementById('btn-restart').addEventListener('click', () => online ? lobby.action('back', { raceId: network.room.raceId }) : start(session.humans));
 document.getElementById('btn-menu').addEventListener('click', menu);
 document.getElementById('btn-pause').addEventListener('click', pause);
 document.getElementById('btn-resume').addEventListener('click', resume);
 document.getElementById('btn-leave').addEventListener('click', menu);
-window.addEventListener('blur', pause);
-document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+const inactive = () => { if (online) { handlers.forEach(h => h.reset()); network.neutral(); } else pause(); };
+window.addEventListener('blur', inactive);
+document.addEventListener('visibilitychange', () => { if (document.hidden) inactive(); });
 window.addEventListener('keydown', e => { if (e.code === 'Escape') { if (state === 'paused') resume(); else pause(); } });
-document.getElementById('menu-version').textContent = `v${APP_VERSION} · Phase 1 preview`;
+document.getElementById('btn-cancel-countdown').addEventListener('click', () => lobby.action('cancel'));
+document.getElementById('menu-version').textContent = `v${APP_VERSION} · Café multiplayer`;
 syncScreens();
 resize();
 requestAnimationFrame(loop);
