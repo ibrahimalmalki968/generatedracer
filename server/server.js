@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { pathToFileURL } from 'node:url';
 import { networkInterfaces } from 'node:os';
+import { connect } from 'node:net';
 import { Game } from './game.js';
 import { staticRequest } from './static.js';
 import { SIMULATION_STEP } from '../js/constants.js';
@@ -45,11 +46,14 @@ export async function createGameServer({ host = '127.0.0.1', port = 0, countdown
         if (m.type === 'create') game.create(s, m);
         else if (m.type === 'join') game.join(s, m.code);
         else if (m.type === 'list') game.list(ws);
-        else if (m.type === 'start') game.start(s);
-        else if (m.type === 'ready') game.ready(s, m.ready);
-        else if (m.type === 'cancel') game.cancel(s);
+        else if (m.type === 'start') game.start(s, m.lobbyId);
+        else if (m.type === 'ready') game.ready(s, m.ready, m.lobbyId);
+        else if (m.type === 'cancel') game.cancel(s, m.lobbyId);
         else if (m.type === 'input') game.input(s, m);
-        else if (m.type === 'leave') game.leave(s);
+        else if (m.type === 'leave') {
+          if (m.roomCode !== s.roomId) throw new Error('Room changed.');
+          game.leave(s);
+        }
         else if (m.type === 'back') game.back(s, m.raceId);
         else throw new Error('Unknown action.');
         if (m.type !== 'input') game.send(ws, { type: 'ack', requestId });
@@ -76,6 +80,14 @@ export async function createGameServer({ host = '127.0.0.1', port = 0, countdown
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const host = process.env.HOST || '0.0.0.0', port = Number(process.env.PORT || 8081);
   if (!Number.isInteger(port) || port < 1 || port > 65535) { console.error('PORT must be an integer from 1 to 65535.'); process.exit(1); }
+  // Windows can allow a wildcard listener alongside an older loopback-only preview.
+  // Detect it rather than serving different applications at the LAN and local URLs.
+  const occupied = await new Promise(resolve => {
+    const probe = connect({ host: host === '0.0.0.0' ? '127.0.0.1' : host, port });
+    const done = result => { probe.destroy(); resolve(result); };
+    probe.once('connect', () => done(true)); probe.once('error', () => done(false)); probe.setTimeout(300, () => done(false));
+  });
+  if (occupied) { console.error(`Port ${port} is in use. Stop the previous preview or select another PORT.`); process.exit(1); }
   try {
     const server = await createGameServer({ host, port });
     console.log(`GenerateRacer: http://127.0.0.1:${port}/`);

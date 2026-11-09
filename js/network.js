@@ -69,7 +69,10 @@ export class Network extends EventTarget {
       const requestId = String(++this.requestId);
       const timer = setTimeout(() => { this.requests.delete(requestId); reject(new Error('Server response timed out. Try again.')); }, 8000);
       this.requests.set(requestId, { resolve, reject, timer });
-      this.send({ type, ...body, requestId });
+      this.send({ type, ...body, requestId,
+        ...(['ready', 'start', 'cancel'].includes(type) ? { lobbyId: this.room?.lobbyId } : {}),
+        ...(type === 'leave' ? { roomCode: this.room?.code } : {}),
+      });
     });
   }
   resetRace() {

@@ -1,4 +1,6 @@
-# Phase 2 architecture proposal — not implemented
+# Phase 2 architecture proposal (historical)
+
+This records the proposal before Phase 2. The multiplayer engine is now implemented and verified; see [current architecture](ARCHITECTURE.md) and [test results](TEST_RESULTS.md). Statements below about pending work describe that earlier milestone boundary.
 
 ## Decision
 

@@ -192,9 +192,9 @@ network.addEventListener('room', e => {
   syncScreens();
 });
 network.addEventListener('left', () => { online = false; session = null; cameras = []; drawingCars.clear(); state = 'browser'; setInputs(false); syncScreens(); });
-network.addEventListener('disconnected', () => {
+network.addEventListener('disconnected', e => {
   online = false; session = null; cameras = []; drawingCars.clear(); state = 'menu'; setInputs(false); syncScreens();
-  lobby.message('Connection lost. Your previous race continues; a closed connection is recorded as DNF.');
+  lobby.message(e.detail === 4001 ? 'This session is now controlled by another tab.' : 'Connection lost. Your previous race continues; a closed connection is recorded as DNF.');
 });
 
 function loop(ts) {
@@ -250,9 +250,24 @@ function renderViewport(camera, offset, viewWidth, dt) {
   drawTrack(ctx);
   [...session.cars].sort((a, b) => a.y - b.y).forEach(c => {
     c.draw(ctx);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'center';
-    ctx.fillText(c.finished ? `${c.name} ✓` : c.name, c.x, c.y - 30);
   });
+  // Separate close starting-grid labels instead of drawing names over one another.
+  const labels = [];
+  const labelSize = Math.max(18, 11 / scale);
+  ctx.fillStyle = '#fff'; ctx.font = `bold ${labelSize}px Arial`; ctx.textAlign = 'center';
+  for (const c of session.cars) {
+    const text = c.finished ? `${c.name} ✓` : c.name;
+    const w = ctx.measureText(text).width + 8 / scale, h = labelSize + 5 / scale;
+    const x = c.x;
+    let y = c.y - 30;
+    while (labels.some(r => Math.abs(r.x - x) < (r.w + w) / 2 && Math.abs(r.y - y) < h)) y -= h;
+    labels.push({ x, y, w });
+    if (y < c.y - 31) {
+      ctx.beginPath(); ctx.moveTo(c.x, c.y - 18); ctx.lineTo(x, y + 4 / scale);
+      ctx.strokeStyle = '#ffffff66'; ctx.lineWidth = 1 / scale; ctx.stroke();
+    }
+    ctx.fillText(text, x, y);
+  }
   ctx.restore();
 }
 function render(dt) {

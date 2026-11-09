@@ -16,7 +16,12 @@ export async function client(port, nickname = 'Racer', token) {
   return { ws, messages, welcome, until,
     send(message) { ws.send(JSON.stringify(message)); },
     async request(message) {
-      const requestId = String(++request); ws.send(JSON.stringify({ ...message, requestId }));
+      const room = [...messages].reverse().find(m => m.type === 'room')?.room;
+      const requestId = String(++request); ws.send(JSON.stringify({
+        ...(['ready', 'start', 'cancel'].includes(message.type) ? { lobbyId: room?.lobbyId } : {}),
+        ...(message.type === 'leave' ? { roomCode: room?.code } : {}),
+        ...message, requestId,
+      }));
       return until(m => m.requestId === requestId && ['ack', 'error'].includes(m.type));
     },
     room() { return [...messages].reverse().find(m => m.type === 'room')?.room; },

@@ -74,13 +74,19 @@ export class Game {
   }
 
   rosterChanged(r) {
-    r.revision++; r.phase = 'lobby'; r.startAt = null;
+    r.revision++; r.lobbyId = randomUUID(); r.phase = 'lobby'; r.startAt = null;
     for (const m of r.members.values()) m.ready = false;
     this.publish(r);
   }
 
-  ready(s, value) {
+  lobbyAction(s, lobbyId) {
     const r = this.room(s);
+    if (r.lobbyId !== lobbyId) { this.publish(r); throw new Error('Lobby changed. Check the current players and try again.'); }
+    return r;
+  }
+
+  ready(s, value, lobbyId) {
+    const r = this.lobbyAction(s, lobbyId);
     if (!['lobby', 'countdown'].includes(r.phase) || r.members.size < 2 || typeof value !== 'boolean') throw new Error('Ready is only available before multiplayer races.');
     if (r.members.get(s.id).ready === value) return;
     if (r.phase === 'countdown') { r.phase = 'lobby'; r.startAt = null; }
@@ -90,8 +96,8 @@ export class Game {
     this.publicLists();
   }
 
-  start(s) {
-    const r = this.room(s);
+  start(s, lobbyId) {
+    const r = this.lobbyAction(s, lobbyId);
     if (r.phase !== 'lobby' || r.members.size !== 1) throw new Error('Solo Start requires exactly one player in the lobby.');
     this.countdown(r);
   }
@@ -102,8 +108,8 @@ export class Game {
     this.publish(r); this.publicLists();
   }
 
-  cancel(s) {
-    const r = this.room(s);
+  cancel(s, lobbyId) {
+    const r = this.lobbyAction(s, lobbyId);
     if (r.phase !== 'countdown') throw new Error('There is no countdown to cancel.');
     this.rosterChanged(r); this.publicLists();
   }
@@ -207,7 +213,7 @@ export class Game {
   publish(r) {
     if (!r) return;
     const room = { code: r.code, name: r.name, private: r.private, capacity: MAX_HUMANS, phase: r.phase,
-      revision: r.revision, raceId: r.raceId, startAt: r.startAt, serverNow: Date.now(), results: r.results,
+      revision: r.revision, lobbyId: r.lobbyId, raceId: r.raceId, startAt: r.startAt, serverNow: Date.now(), results: r.results,
       players: [...r.members.values()].map(m => ({ id: m.session.id, nickname: m.session.name, ready: m.ready, carId: m.carId })) };
     for (const m of r.members.values()) {
       this.send(m.session.ws, { type: 'room', room });

@@ -1,6 +1,6 @@
 // Game constants
 
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.2.0';
 export const REPO_URL    = 'https://github.com/commjoen/generatedracer';
 
 export const WORLD_W = 3000;
@@ -53,15 +53,6 @@ export const AI_SPEED_FACTORS = [1, 0.88, 0.91, 0.93, 0.86, 0.89];
 export const CAM_LERP        = 0.10;  // smoothing (0 = locked, 1 = instant)
 export const VIEWPORT_WORLD_W = 1100; // world units visible horizontally
 export const VIEWPORT_WORLD_H = 750;  // world units visible vertically
-
-// Multiplayer
-export const STUN_SERVERS = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-];
-
-// Networking tick rate
-export const NET_TICK_MS = 50;  // 20 Hz state broadcast
 
 // Turbo boost
 export const TURBO_DURATION   = 2.5;  // seconds active

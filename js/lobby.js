@@ -41,6 +41,10 @@ export class LobbyUI {
       if (this.invite && !this.inviteAttempted) { this.inviteAttempted = true; this.action('join', { code: this.invite }); }
     });
     if (this.invite) el('entryHint').textContent = 'Enter your nickname to join the invitation.';
+    // A reload restores the tab's short-lived anonymous session; a first visit still asks for a nickname.
+    if (network.token && el('nickname').value.trim()) {
+      try { network.connect(displayName(el('nickname').value)); } catch { /* fall back to entry validation */ }
+    }
   }
 
   message(text) { this.error.textContent = text; this.error.classList.toggle('hidden', !text); }

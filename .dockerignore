@@ -2,3 +2,9 @@
 .github
 *.md
 renovate.json
+node_modules
+dist
+work
+test-results
+tests
+.env

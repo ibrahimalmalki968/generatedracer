@@ -83,3 +83,12 @@ test('empty rooms are removed; token session retention has a bounded expiry', as
   for (const session of s.game.sessions.values()) session.touched = Date.now() - 11 * 60000;
   s.game.sweep(); assert.equal(s.game.sessions.size, 0);
 });
+test('delayed Ready/Start from an outdated roster cannot affect a new lobby generation', async t => {
+  const s = await setup(t), host = await create(s), oldLobby = host.room().lobbyId;
+  const guest = await client(s.port, 'New member'); await guest.request({ type: 'join', code: host.room().code });
+  assert.equal((await host.request({ type: 'ready', ready: true, lobbyId: oldLobby })).type, 'error');
+  assert.ok([...s.game.rooms.values()][0].members.get(host.welcome.playerId).ready === false);
+  await guest.request({ type: 'leave' });
+  assert.equal((await host.request({ type: 'start', lobbyId: oldLobby })).type, 'error');
+  assert.equal([...s.game.rooms.values()][0].phase, 'lobby');
+});

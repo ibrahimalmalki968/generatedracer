@@ -1,5 +1,7 @@
 # Confirmed café MVP milestones
 
+All five local-development milestones have now been implemented and verified. The original phase descriptions/approval boundary below are retained as planning history; use [PROJECT_STATUS.md](PROJECT_STATUS.md), [ARCHITECTURE.md](ARCHITECTURE.md) and [TEST_RESULTS.md](TEST_RESULTS.md) for the delivered state. Physical café/device validation remains separate from local software completion.
+
 Updated 10 November 2026. This replaces the initial exploratory plan. The user approved setup, fresh audit and Phase 1 execution, and requested a stop before Phase 2.
 
 ## Rules that every milestone must preserve

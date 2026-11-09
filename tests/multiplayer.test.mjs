@@ -89,6 +89,16 @@ test('delayed controls are current-race only, duplicate sequence and boost canno
   await clients[0].until(m => m.type === 'snapshot' && m.cars[0].turboUses === 1);
   assert.equal(room.engine.cars[0].turboUses, 1);
 });
+test('valid live-session handover keeps exactly one participant and preserves its active car', async t => {
+  const s = await server(t), { clients, code } = await group(s, 2); await ready(clients);
+  const first = clients[1].welcome, replacement = await client(s.port, 'Driver 1', first.token);
+  await replacement.until(m => m.type === 'room' && m.room.phase === 'racing');
+  await new Promise(r => setTimeout(r, 40));
+  const room = s.game.rooms.get(code);
+  assert.equal(room.members.size, 2); assert.equal(room.engine.cars[1].disconnected, false);
+  assert.equal(replacement.welcome.playerId, first.playerId);
+  assert.equal(room.members.get(first.playerId).session.ws, [...s.wss.clients].find(ws => ws.session?.id === first.playerId));
+});
 
 test('2–6 human full physical races over real sockets agree on laps and final standings', { timeout: 120000 }, async t => {
   const s = await server(t);
