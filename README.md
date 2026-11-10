@@ -2,6 +2,8 @@
 
 A locally playable, mobile-first racing MVP adapted from [GenerateRacer](https://github.com/commjoen/generatedracer) by Jeroen Willemsen. Vanilla JavaScript + Canvas 2D, with one authoritative Node/WebSocket server. No database, registration or app installation.
 
+Public testing: [open the temporary HTTPS game](https://brian-desired-theology-bath.trycloudflare.com/). This free Cloudflare Tunnel forwards to the production-mode Node server on the development computer. The computer must stay awake and both processes must remain running; the URL is not permanent cloud hosting. A dedicated Render free-service configuration is ready in `render.yaml`, pending hosting authorization. See [deployment status](docs/PUBLIC_DEPLOYMENT.md).
+
 ## Play
 
 The engineering agent leaves the complete preview running at:
@@ -68,7 +70,7 @@ Runtime dependency: pinned `ws`. Development-only browser automation: pinned `pl
 - [Deployment and local-network guide](docs/DEPLOYMENT_GUIDE.md)
 - [Known limitations](docs/KNOWN_ISSUES.md)
 
-The older audit/Phase 1 documents describe historical milestones. Legacy upstream GitHub Pages/release workflows have not been run; Pages alone cannot host this authoritative server. Public publishing requires separate approval.
+The older audit/Phase 1 documents describe historical milestones. Legacy upstream GitHub Pages/release workflows have not been run; Pages alone cannot host this authoritative server. Public testing and a deployment-branch push are now authorized; main/upstream changes and paid resources are not.
 
 ## License and attribution
 

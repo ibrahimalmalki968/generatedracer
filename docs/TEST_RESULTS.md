@@ -2,6 +2,8 @@
 
 Status: final local verification. Raw reports are generated in ignored `work/`; the counts below describe real executions, not promised coverage.
 
+Deployment follow-up: **57 automated tests passed, 0 failed/skipped** after production origin pinning, connection/HTTP limits, headers and the encoded Windows traversal fix. Four additional tests cover traversal rejection, configured HTTPS origins/forged forwarded headers, actual 429 connection admission, and assigned-port production startup/asset protection/shutdown. Local Chrome full regression passed 130 assertions initially; the revised network-aware harness passed 128 against a separately running server (two owned-server cleanup assertions are intentionally inapplicable in external mode). Public endpoint execution and failures are documented in [PUBLIC_DEPLOYMENT.md](PUBLIC_DEPLOYMENT.md); the remaining sections retain the original Phase 5 local baseline.
+
 ## Automated tests
 
 `npm test`: **53 passed, 0 failed, 0 skipped** (about 52 seconds).

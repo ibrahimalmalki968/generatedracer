@@ -1,6 +1,6 @@
 # Project status — locally testable MVP complete
 
-Branch: `feat/phase-1-mobile-racing`. All work remains local; main and the upstream repository are unchanged. Nothing has been pushed, merged or publicly deployed.
+Current branch: `deploy/public-mvp`, based on the verified Phase 1–5 commit `abbc449`. Main and upstream are unchanged. Public testing and a fork deployment-branch push are authorized. The complete game is now exposed through a temporary Cloudflare HTTPS/WSS tunnel; durable Render hosting is pending authorization. See [public deployment status](PUBLIC_DEPLOYMENT.md) for current verification and exact next action. The milestone table below records the original local MVP baseline.
 
 | Milestone | Status | Commit |
 | --- | --- | --- |

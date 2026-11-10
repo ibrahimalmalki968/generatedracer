@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises';
 // Browser journeys previously verified during Phases 3 and 4.
 export const roomJourney = async (page, baseUrl, evidenceDir) => {
   const contexts = [], checks = [], errors = [], browser = page.context().browser();
@@ -34,9 +35,15 @@ export const roomJourney = async (page, baseUrl, evidenceDir) => {
     ok((await guest.locator('#lobbyPlayers').innerText()).includes('Waiting'), 'Countdown cancellation resets readiness');
     for (const p of [host, guest]) await p.getByRole('button', { name: 'Ready', exact: true }).tap();
     await Promise.all([host, guest].map(p => p.waitForFunction(() => window.lastSnapshot?.cars.length === 2)));
-    await host.keyboard.down('ArrowUp'); await guest.keyboard.down('ArrowUp');
-    await host.waitForTimeout(1300); await host.keyboard.up('ArrowUp'); await guest.keyboard.up('ArrowUp');
-    ok(await guest.evaluate(() => lastSnapshot.cars.every(c => c.speed > 0)), 'Browser controls move both authoritative cars');
+    // Wait for authoritative movement on each connection, rather than assuming
+    // a fixed localhost delay or that switching pages preserves keyboard focus.
+    for (const p of [host, guest]) {
+      const name = await p.getByLabel('Your nickname').inputValue();
+      await p.keyboard.down('ArrowUp');
+      await p.waitForFunction(name => window.lastSnapshot?.cars.some(c => c.name === name && c.speed > 0), name, { timeout: 15000 });
+      await p.keyboard.up('ArrowUp');
+    }
+    checks.push('Browser controls move both authoritative cars');
     ok(await host.evaluate(() => lastSnapshot.cars.some(c => c.name === 'عمر')), 'Nicknames visible in racing state');
     await outsider.getByText('Join with a room code', { exact: true }).click(); await outsider.getByLabel('Room code', { exact: true }).fill(code);
     await outsider.getByRole('button', { name: 'Join Room', exact: true }).tap();
@@ -80,9 +87,16 @@ export const rematchJourney = async (page, baseUrl, evidenceDir) => {
         const { Network } = await import('/js/network.js');
         const { AiController } = await import('/js/ai.js'); const { Car } = await import('/js/car.js');
         const apply = Network.prototype.apply, predict = Network.prototype.predict;
-        Network.prototype.apply = function(s) { window.testNet = this; return apply.call(this, s); };
+        Network.prototype.apply = function(s) {
+          window.testNet = this;
+          if (!this.socket.testObserved) {
+            this.socket.testObserved = true;
+            this.socket.addEventListener('close', e => { window.lastSocketClose = { code: e.code, reason: e.reason }; });
+          }
+          return apply.call(this, s);
+        };
         Network.prototype.predict = function(input) {
-          const c = this.latest?.cars.find(c => c.participantId === this.playerId);
+          const c = this.predicted || this.latest?.cars.find(c => c.participantId === this.playerId);
           if (window.drive && c && !c.finished) {
             const ghost = new Car(c.id, c.x, c.y, c.angle, { isHuman: false }); Object.assign(ghost, { speed: c.speed, lap: c.lap, turboAvailable: c.turboAvailable });
             const driver = new AiController(ghost); if (window.factor) driver._speedFactor = window.factor;
@@ -124,5 +138,13 @@ export const rematchJourney = async (page, baseUrl, evidenceDir) => {
     }
     ok(errors.length === 0, 'No captured browser exceptions');
     return { checks, errors };
+  } catch (error) {
+    const states = [];
+    for (const [i, p] of pages.entries()) {
+      states.push(await p.evaluate(() => ({ phase: window.testNet?.room?.phase, snapshot: window.testNet?.latest, close: window.lastSocketClose })).catch(() => null));
+      await p.screenshot({ path: `${evidenceDir}/failed-race-${i}.png`, scale: 'css' }).catch(() => {});
+    }
+    await writeFile(`${evidenceDir}/failed-race-states.json`, JSON.stringify(states, null, 2));
+    throw error;
   } finally { for (const ctx of contexts) await ctx.close(); }
 };

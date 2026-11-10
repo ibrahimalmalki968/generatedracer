@@ -4,12 +4,17 @@ import { resolve, sep, extname } from 'node:path';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 export async function staticRequest(req, res) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'same-origin');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
   try {
     if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405).end(); return; }
     const path = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
     if (path === '/health') { res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"ok":true}'); return; }
     const name = path === '/' ? 'index.html' : path.slice(1);
-    if (name.split('/').some(p => p.startsWith('.')) || !/^(index\.html|game\.css|LICENSE|(?:js|shared)\/.+\.js)$/.test(name)) {
+    if (name.includes('\\') || name.split('/').some(p => p.startsWith('.')) || !/^(index\.html|game\.css|LICENSE|(?:js|shared)\/.+\.js)$/.test(name)) {
       res.writeHead(404).end(); return;
     }
     const file = resolve(root, name);

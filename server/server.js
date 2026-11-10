@@ -6,17 +6,23 @@ import { connect } from 'node:net';
 import { Game } from './game.js';
 import { staticRequest } from './static.js';
 import { SIMULATION_STEP } from '../js/constants.js';
+import { configuredOrigin, allowedOrigin, connectionBudget } from './security.js';
 
-export async function createGameServer({ host = '127.0.0.1', port = 0, countdownMs = 3000, autoTick = true } = {}) {
+export async function createGameServer({ host = '127.0.0.1', port = 0, countdownMs = 3000, autoTick = true,
+  publicOrigin = process.env.PUBLIC_ORIGIN || process.env.RENDER_EXTERNAL_URL,
+  production = process.env.NODE_ENV === 'production' } = {}) {
+  const expectedOrigin = configuredOrigin(publicOrigin, production), admitConnection = connectionBudget();
   const game = new Game({ countdownMs });
   const http = createServer(staticRequest);
+  http.requestTimeout = 15000; http.headersTimeout = 10000; http.maxHeadersCount = 50;
   const wss = new WebSocketServer({ noServer: true, maxPayload: 4096, perMessageDeflate: false });
   http.on('upgrade', (req, socket, head) => {
     try {
       const origin = req.headers.origin;
-      if (req.url !== '/socket' || wss.clients.size >= 128 || (origin && new URL(origin).host !== req.headers.host)) {
+      if (req.url !== '/socket' || wss.clients.size >= 128 || !allowedOrigin(origin, req.headers.host, expectedOrigin, production)) {
         socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); return;
       }
+      if (!admitConnection()) { socket.end('HTTP/1.1 429 Too Many Requests\r\nConnection: close\r\n\r\n'); return; }
       wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws));
     } catch { socket.destroy(); }
   });

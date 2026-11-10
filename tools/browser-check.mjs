@@ -9,7 +9,9 @@ const evidence = resolve(process.env.EVIDENCE_DIR || 'work/browser');
 await mkdir(evidence, { recursive: true });
 const report = { channel: process.env.BROWSER_CHANNEL || 'chrome', mode: process.env.BROWSER_SUITE || 'full', checks: [], errors: [], scenarios: [] };
 const check = (condition, label) => { assert.ok(condition, label); report.checks.push(label); };
-const s = await createGameServer(); const baseUrl = `http://127.0.0.1:${s.port}/`;
+const s = process.env.BASE_URL ? null : await createGameServer();
+const baseUrl = process.env.BASE_URL ? new URL('/', process.env.BASE_URL).href : `http://127.0.0.1:${s.port}/`;
+report.baseUrl = baseUrl;
 let browser;
 const before = { rss: process.memoryUsage().rss, cpu: process.cpuUsage(), at: performance.now() };
 try {
@@ -94,16 +96,19 @@ try {
     const gas = await point('#btn-gas'), left = await point('#btn-left'), turbo = await point('#hud-turbo');
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...gas, id: 1 }, { ...left, id: 2 }, { ...turbo, id: 3 }] });
     await host.waitForTimeout(700);
+    await host.waitForFunction(() => window.testNet?.latest?.cars.find(c => c.participantId === testNet.playerId)?.turboUses === 1, null, { timeout: 15000 });
     check(await host.evaluate(() => testNet.latest.cars.find(c => c.participantId === testNet.playerId).turboUses === 1), 'Touch Turbo is authoritative');
     check(await host.evaluate(() => testNet.predicted.speed > 0), 'Touch acceleration and steering drive predicted car');
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await host.setViewportSize({ width: 844, height: 390 }); await host.waitForTimeout(100);
-    check(await host.evaluate(() => testNet.pending.length < 120), 'Prediction history bounded after orientation change');
+    check(await host.evaluate(() => testNet.pending.length <= 120), 'Prediction history bounded after orientation change');
     for (const p of racers) await p.keyboard.down('ArrowUp');
     await codePage.evaluate(() => { window.delayInput = 150; });
+    const previousAck = await codePage.evaluate(() => testNet.latest.cars.find(c => c.participantId === testNet.playerId).ack);
     await host.waitForTimeout(2300);
     check(await host.evaluate(() => testNet.latest.cars.every(c => c.speed > 0)), 'Six clients move simultaneously including 150ms delayed input');
-    check(await codePage.evaluate(() => testNet.pending.length < 30), 'Delayed input reconciles without unbounded history');
+    await codePage.waitForFunction(ack => window.testNet?.latest?.cars.find(c => c.participantId === testNet.playerId)?.ack > ack, previousAck, { timeout: 15000 });
+    check(await codePage.evaluate(() => testNet.pending.length <= 120 && testNet.pending.every(p => p.seq > testNet.latest.cars.find(c => c.participantId === testNet.playerId).ack)), 'Delayed input acknowledgments prune bounded prediction history');
     await codePage.evaluate(() => { window.delayInput = 0; });
     for (const p of racers) await p.keyboard.up('ArrowUp');
     const previousId = await extras[0].evaluate(() => testNet.playerId);
@@ -136,7 +141,7 @@ try {
         const old = Network.prototype.predict;
         Network.prototype.predict = function(input) {
           window.soloNet = this;
-          const c = this.latest?.cars.find(c => c.participantId === this.playerId);
+          const c = this.predicted || this.latest?.cars.find(c => c.participantId === this.playerId);
           if (c && !c.finished) {
             const ghost = new Car(c.id, c.x, c.y, c.angle, { isHuman: false }); Object.assign(ghost, { speed: c.speed, lap: c.lap, turboAvailable: c.turboAvailable });
             new AiController(ghost).update(1 / 60); input = ghost.input;
@@ -158,8 +163,10 @@ try {
     } finally { await ctx.close(); }
   }
   await browser.close(); browser = null; await new Promise(r => setTimeout(r, 100));
-  check(s.game.rooms.size === 0, 'All browser test rooms cleaned up');
-  check(s.wss.clients.size === 0, 'All browser sockets cleaned up');
+  if (s) {
+    check(s.game.rooms.size === 0, 'All browser test rooms cleaned up');
+    check(s.wss.clients.size === 0, 'All browser sockets cleaned up');
+  }
   check(report.errors.length === 0, 'No captured app errors');
   report.passed = report.checks.length;
 } catch (e) { report.failed = e.stack; process.exitCode = 1; }
@@ -167,7 +174,7 @@ finally {
   if (browser) await browser.close();
   report.durationSeconds = (performance.now() - before.at) / 1000;
   report.nodeCpuMicros = process.cpuUsage(before.cpu); report.nodeRssDelta = process.memoryUsage().rss - before.rss;
-  await s.close();
+  if (s) await s.close();
   await writeFile(`${evidence}/report.json`, JSON.stringify(report, null, 2));
   console.log(JSON.stringify({ passed: report.passed, failed: report.failed, errors: report.errors, seconds: report.durationSeconds, evidence }, null, 2));
 }

@@ -1,0 +1,20 @@
+# One in-memory authoritative process. Never scale horizontally without shared state.
+services:
+  - type: web
+    name: generatedracer-cafe
+    runtime: node
+    plan: free
+    region: frankfurt
+    repo: https://github.com/ibrahimalmalki968/generatedracer
+    branch: deploy/public-mvp
+    buildCommand: npm ci --omit=dev --ignore-scripts
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeployTrigger: 'off'
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: '22'
+      - key: HOST
+        value: 0.0.0.0
