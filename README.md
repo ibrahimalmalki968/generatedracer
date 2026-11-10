@@ -11,7 +11,7 @@ The engineering agent leaves the complete preview running at:
 - This computer: http://127.0.0.1:8081/
 - Current Wi-Fi address: http://192.168.100.206:8081/ (other devices must share the network; the address can change).
 
-Enter a nickname, create a public/private room or join one, then use the same lobby for solo and multiplayer. Solo waits for Start Race. With 2–6 humans, everyone presses Ready. Invite friends with the room code or link.
+Enter a nickname, then choose **Solo Race** or **Multiplayer**. Solo Race starts the countdown in one tap against five AI; its private session is created automatically. Results offer **Race again** for immediate replay or **Main menu** to choose a mode. Multiplayer opens the existing public/private room browser; with 2–6 humans, everyone presses Ready. Invitation links still open the invited lobby after nickname entry. Multiplayer rooms with one waiting human retain their explicit Start Race button.
 
 ## Rules
 
@@ -20,7 +20,7 @@ Enter a nickname, create a public/private room or join one, then use the same lo
 - One non-accumulating Turbo use per lap, maximum 3. Default boost: 2.5 seconds at 1.6x forward speed cap. No timed recharge or pickups.
 - No weapons. Normal collisions remain.
 - First finisher wins; remaining connected humans continue. Finished/disconnected cars cannot collide. Departures are DNF and never block results.
-- Final results are identical on every client. Return room to lobby resets everyone to Waiting in the same room. No automatic rematch.
+- Final results are identical on every client. Multiplayer returns to the same lobby with everyone Waiting; solo offers one-tap Race again with fresh laps and Turbo. No automatic rematch.
 - No new joining, waiting or spectating during countdown, racing or results. Joining reopens in the lobby.
 
 ## Run locally

@@ -1,5 +1,7 @@
 # Public deployment — 10 November 2026
 
+11 November update: the same public URL now serves the new Solo Race / Multiplayer menu. The production Node process was restarted with automatic private solo sessions, direct replay and menu navigation. Local regression: 61 tests and 152 Chrome browser assertions passed. Public Chrome full: 150 passed; public Edge smoke: 129 passed; zero captured app errors. Full public tests include two physically driven solo races with one-tap replay plus the existing multiplayer journeys. The hosting/uptime limitations below are unchanged.
+
 ## Status
 
 **Partial: public test preview live; dedicated cloud hosting pending authorization.**

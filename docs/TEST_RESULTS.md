@@ -1,5 +1,13 @@
 # Verification results — 10 November 2026
 
+## 11 November — mode menu and one-tap solo
+
+`npm test`: **61 passed, 0 failed/skipped**. Four additional real-WebSocket tests cover private atomic solo start, exclusion of other humans, duplicate/stale replay rejection, lap/Turbo/input reset, cancel/leave cleanup and prevention of multiplayer-to-solo conversion. The existing 2–6-human racing and security regressions remain green. Production build and runtime-package smoke passed; MIT LICENSE is unchanged.
+
+Updated local Chrome full browser suite: **152 assertions passed**. Public Chrome full: **150 passed**; public Edge smoke: **129 passed**. No captured app errors. The two local-only assertions inspect the owned server's room/socket cleanup. New coverage includes both mode choices fitting six viewports (320x568 through 1280x800, including 844x390 landscape), one-tap solo countdown/cancellation, five AI, in-race exit, nickname editing and multiplayer navigation. The full suite physically drives two complete three-lap solo races with a one-tap replay, verifies fresh Turbo/laps in the same private session, and exits results to mode selection. Existing public/private/code/invitation/Ready/countdown/six-client/touch/reload and multiplayer-rematch journeys were retained. Browser plugin unavailable; existing Playwright with installed Chrome/Edge was used. Screenshots/reports are outside the repository in workspace `outputs/menu-qa-*`. Physical iPhone/Safari verification of this update has not been performed by the agent.
+
+The remaining sections describe the original deployment/MVP baseline.
+
 Status: final local verification. Raw reports are generated in ignored `work/`; the counts below describe real executions, not promised coverage.
 
 Deployment follow-up: **57 automated tests passed, 0 failed/skipped** after production origin pinning, connection/HTTP limits, headers and the encoded Windows traversal fix. Four additional tests cover traversal rejection, configured HTTPS origins/forged forwarded headers, actual 429 connection admission, and assigned-port production startup/asset protection/shutdown. Local Chrome full regression passed 130 assertions initially; the revised network-aware harness passed 128 against a separately running server (two owned-server cleanup assertions are intentionally inapplicable in external mode). Public endpoint execution and failures are documented in [PUBLIC_DEPLOYMENT.md](PUBLIC_DEPLOYMENT.md); the remaining sections retain the original Phase 5 local baseline.

@@ -112,9 +112,9 @@ function resume() {
   document.activeElement?.blur();
   syncScreens();
 }
-function menu() {
-  if (online && network.room) { setInputs(false); network.neutral(); lobby.action('leave'); return; }
-  state = network.ready ? 'browser' : 'menu';
+function menu(toMain = false) {
+  if (online && network.room) { setInputs(false); network.neutral(); lobby.leave(toMain ? 'modes' : 'browser'); return; }
+  state = network.ready ? 'modes' : 'menu';
   online = false;
   setInputs(false);
   session = null;
@@ -131,7 +131,7 @@ function finish() {
   const standings = session.race.getResults();
   const winner = standings.find(r => r.status === 'finished');
   document.getElementById('resultsSummary').textContent = winner ? `${winner.name} wins · 3 valid laps` : 'Race ended · no finisher';
-  document.getElementById('resultsHint').textContent = online ? 'Return everyone to this room’s lobby for a rematch. All Ready statuses reset.' : 'Race again for a fresh start.';
+  document.getElementById('resultsHint').textContent = online && !network.room?.solo ? 'Return everyone to this room’s lobby for a rematch. All Ready statuses reset.' : 'Race again for a fresh start.';
   for (const r of standings) {
     const row = document.createElement('li');
     row.className = `result-row${r.isHuman ? ' result-human' : ''}`;
@@ -170,13 +170,18 @@ function onlineScene() {
 }
 
 network.addEventListener('welcome', () => {
-  if (!network.room) { online = false; session = null; cameras = []; state = 'browser'; setInputs(false); syncScreens(); }
+  if (!network.room && !(session && !online)) { online = false; session = null; cameras = []; state = lobby.invite ? 'browser' : 'modes'; setInputs(false); syncScreens(); }
+});
+lobby.addEventListener('navigate', e => {
+  if (network.room) return;
+  online = false; session = null; cameras = []; drawingCars.clear(); accumulator = 0;
+  state = e.detail; setInputs(false); syncScreens();
 });
 network.addEventListener('room', e => {
   online = true;
   const room = e.detail;
   if (room.phase === 'lobby') {
-    state = 'lobby'; session = null; cameras = []; drawingCars.clear(); setInputs(false);
+    state = room.solo ? 'modes' : 'lobby'; session = null; cameras = []; drawingCars.clear(); setInputs(false);
   } else if (room.phase === 'countdown') {
     state = 'countdown'; session = null; cameras = []; drawingCars.clear(); accumulator = 0; setInputs(false);
   } else if (room.phase === 'racing') {
@@ -187,11 +192,16 @@ network.addEventListener('room', e => {
     if (session) finish();
   }
   document.getElementById('btn-pause').textContent = online ? 'Leave / resume' : 'Ⅱ Pause';
-  document.getElementById('btn-restart').textContent = online ? 'Return room to lobby' : 'Race again';
-  document.getElementById('btn-menu').textContent = online ? 'Leave room' : 'Main menu';
+  document.getElementById('btn-restart').textContent = room.solo ? 'Race again' : 'Return room to lobby';
+  document.getElementById('btn-menu').textContent = 'Main menu';
+  document.getElementById('btn-leave').textContent = room.solo ? 'Main menu' : 'Leave race';
   syncScreens();
 });
-network.addEventListener('left', () => { online = false; session = null; cameras = []; drawingCars.clear(); state = 'browser'; setInputs(false); syncScreens(); });
+network.addEventListener('left', e => {
+  online = false; session = null; cameras = []; drawingCars.clear();
+  state = e.detail.solo ? 'modes' : lobby.leaveDestination; lobby.leaveDestination = 'browser';
+  setInputs(false); syncScreens();
+});
 network.addEventListener('disconnected', e => {
   online = false; session = null; cameras = []; drawingCars.clear(); state = 'menu'; setInputs(false); syncScreens();
   lobby.message(e.detail === 4001 ? 'This session is now controlled by another tab.' : 'Connection lost. Your previous race continues; a closed connection is recorded as DNF.');
@@ -288,11 +298,11 @@ function render(dt) {
 }
 
 document.getElementById('btn-splitscreen').addEventListener('click', () => start(2));
-document.getElementById('btn-restart').addEventListener('click', () => online ? lobby.action('back', { raceId: network.room.raceId }) : start(session.humans));
-document.getElementById('btn-menu').addEventListener('click', menu);
+document.getElementById('btn-restart').addEventListener('click', () => online ? lobby.action(network.room.solo ? 'solo' : 'back', { raceId: network.room.raceId }) : start(session.humans));
+document.getElementById('btn-menu').addEventListener('click', () => menu(true));
 document.getElementById('btn-pause').addEventListener('click', pause);
 document.getElementById('btn-resume').addEventListener('click', resume);
-document.getElementById('btn-leave').addEventListener('click', menu);
+document.getElementById('btn-leave').addEventListener('click', () => menu());
 const inactive = () => { if (online) { handlers.forEach(h => h.reset()); network.neutral(); } else pause(); };
 window.addEventListener('blur', inactive);
 document.addEventListener('visibilitychange', () => { if (document.hidden) inactive(); });

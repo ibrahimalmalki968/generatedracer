@@ -50,6 +50,7 @@ export async function createGameServer({ host = '127.0.0.1', port = 0, countdown
         const s = ws.session;
         if (!s) throw new Error('Enter a nickname first.');
         if (m.type === 'create') game.create(s, m);
+        else if (m.type === 'solo') game.solo(s, m.raceId);
         else if (m.type === 'join') game.join(s, m.code);
         else if (m.type === 'list') game.list(ws);
         else if (m.type === 'start') game.start(s, m.lobbyId);

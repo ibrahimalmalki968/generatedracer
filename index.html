@@ -58,7 +58,18 @@
       <footer><a href="https://github.com/commjoen/generatedracer" target="_blank" rel="noopener noreferrer">Based on GenerateRacer by Jeroen Willemsen</a><a href="LICENSE" target="_blank" rel="noopener">MIT license</a><p id="menu-version"></p></footer>
     </section>
   </main>
+  <div id="modeMenu" class="overlay hidden"><section class="panel mode-panel" aria-labelledby="modeTitle">
+    <p class="eyebrow">CAFÉ RACING</p><h2 id="modeTitle">Choose your race</h2>
+    <p id="modeGreeting" class="subtitle"></p>
+    <div class="mode-options">
+      <button id="btn-solo" class="btn primary mode-option" aria-label="Solo Race" aria-describedby="soloDescription"><strong>Solo Race</strong><small id="soloDescription">Race against 5 AI · start in one tap</small></button>
+      <button id="btn-multiplayer" class="btn secondary mode-option" aria-label="Multiplayer" aria-describedby="multiplayerDescription"><strong>Multiplayer</strong><small id="multiplayerDescription">Create a room or join friends · up to 6 players</small></button>
+    </div>
+    <p id="modeHint" class="help">3 laps · one Turbo per lap · no weapons</p>
+    <button id="btn-change-name" class="text-btn">Change nickname</button>
+  </section></div>
   <div id="roomBrowser" class="overlay hidden"><section class="panel wide-panel" aria-labelledby="browserTitle">
+    <button id="btn-browser-menu" class="text-btn">← Main menu</button>
     <p class="eyebrow" id="playerGreeting">WELCOME</p><h2 id="browserTitle">Find your race</h2>
     <div class="section-title"><h3>Public rooms</h3><button id="btn-refresh" class="text-btn">Refresh</button></div>
     <ul id="publicRooms" class="plain-list" aria-label="Public rooms"></ul>
@@ -77,6 +88,7 @@
     <p id="lobbyHint" class="help"></p><button id="btn-room-start" class="btn primary">Start Race</button>
     <details><summary>Invite a friend · <span id="lobbyCode"></span></summary><label for="inviteLink">Invitation link</label><input id="inviteLink" readonly /><button id="btn-invite" class="btn secondary">Copy invitation link</button></details>
     <button id="btn-lobby-leave" class="btn secondary">Leave room</button>
+    <button id="btn-lobby-menu" class="text-btn">Main menu</button>
   </section></div>
   <div id="pauseMenu" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
     <section class="panel"><p class="eyebrow">TAKE A BREATHER</p><h2 id="pauseTitle">Race paused</h2><p id="pauseDescription" class="subtitle">Your local race is waiting for you.</p><button id="btn-resume" class="btn primary">Resume race</button><button id="btn-leave" class="btn secondary">Leave race</button></section>

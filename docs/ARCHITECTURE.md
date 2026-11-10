@@ -28,6 +28,10 @@ Long process stalls are bounded rather than triggering unlimited catch-up; simul
 
 ## Room lifecycle
 
+The normal entry path is nickname -> Solo Race / Multiplayer. The `solo` command creates a server-owned private room and commits its normal countdown atomically; it reuses `create`, `start`, `LocalSession`, existing physics/laps/Turbo and results. Solo rooms are omitted from discovery and reject any other participant even if their room code is known. The client cannot set the trusted solo flag through ordinary room creation. A `solo` replay requires the current completed race ID, resets via `back` and starts another countdown in the same private session. Duplicate/stale replay requests are rejected. Cancel/leave deletes that session and returns to mode selection. No second game engine or persistence service was added.
+
+Multiplayer keeps its room browser, public/private invitations, lobby, Ready system and same-room rematches. Direct invitations bypass mode selection. Main menu controls leave a current room before changing mode; leaving a multiplayer room can still return to its room browser. Mode buttons are disabled during a pending transition. Nickname changes reconnect the existing short-lived identity while outside a room.
+
 `lobby -> countdown -> racing -> results -> lobby`
 
 Room codes are random 10-character hexadecimal identifiers. Private codes are omitted from public listings; invitation URLs contain only the room code, never a session token. Capacity is six humans. Joining is allowed only in lobby and below capacity. The lock applies during committed countdown, racing and results, including requests to wait or spectate.

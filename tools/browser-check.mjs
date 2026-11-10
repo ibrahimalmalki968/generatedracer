@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import { createGameServer } from '../server/server.js';
 import { roomJourney, rematchJourney } from '../tests/browser-journeys.mjs';
+import { modeJourney } from '../tests/browser-menu.mjs';
 
 const evidence = resolve(process.env.EVIDENCE_DIR || 'work/browser');
 await mkdir(evidence, { recursive: true });
@@ -19,7 +20,7 @@ try {
     args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'] });
   report.version = browser.version();
   const root = await browser.newPage(); await root.goto(baseUrl);
-  for (const [name, scenario] of [['rooms and lobby', roomJourney], ...(report.mode === 'full' ? [['two full races and rematches', rematchJourney]] : [])]) {
+  for (const [name, scenario] of [['mode selection and one-tap solo', modeJourney], ['rooms and lobby', roomJourney], ...(report.mode === 'full' ? [['two full races and rematches', rematchJourney]] : [])]) {
     console.log(`Checking ${name}…`);
     const result = await scenario(root, baseUrl, evidence);
     report.checks.push(...result.checks); report.errors.push(...result.errors); report.scenarios.push(name);
@@ -41,6 +42,7 @@ try {
       };
     });
     await p.getByLabel('Your nickname').fill(n); await p.getByRole('button', { name: 'Continue →', exact: true }).tap();
+    if (!invite) await p.getByRole('button', { name: 'Multiplayer', exact: true }).tap();
     return p;
   }
   try {
@@ -117,7 +119,7 @@ try {
       const { Network } = await import('/js/network.js'); const apply = Network.prototype.apply;
       Network.prototype.apply = function(s) { window.testNet = this; return apply.call(this, s); };
     });
-    await extras[0].waitForFunction(() => !document.getElementById('roomBrowser').classList.contains('hidden') || window.testNet?.room?.phase === 'racing');
+    await extras[0].waitForFunction(() => !document.getElementById('roomBrowser').classList.contains('hidden') || !document.getElementById('modeMenu').classList.contains('hidden') || window.testNet?.room?.phase === 'racing');
     const resumedId = await extras[0].evaluate(() => window.testNet?.playerId);
     check(!resumedId || resumedId === previousId, 'Reload can only resume the same existing identity');
     await extras[1].context().close();
@@ -142,7 +144,7 @@ try {
         Network.prototype.predict = function(input) {
           window.soloNet = this;
           const c = this.predicted || this.latest?.cars.find(c => c.participantId === this.playerId);
-          if (c && !c.finished) {
+          if (window.soloDrive !== false && c && !c.finished) {
             const ghost = new Car(c.id, c.x, c.y, c.angle, { isHuman: false }); Object.assign(ghost, { speed: c.speed, lap: c.lap, turboAvailable: c.turboAvailable });
             new AiController(ghost).update(1 / 60); input = ghost.input;
           }
@@ -150,16 +152,21 @@ try {
         };
       });
       await p.getByLabel('Your nickname').fill('Solo customer'); await p.getByRole('button', { name: 'Continue →', exact: true }).tap();
-      await p.getByText('Create a room', { exact: true }).click(); await p.getByRole('button', { name: 'Create Room', exact: true }).tap();
-      await p.locator('#lobbyScreen').waitFor({ state: 'visible' }); const code = await p.locator('#lobbyCode').textContent();
-      await p.getByRole('button', { name: 'Start Race', exact: true }).tap();
+      await p.getByRole('button', { name: 'Solo Race', exact: true }).tap();
       await p.locator('#raceOver').waitFor({ state: 'visible', timeout: 110000 });
       check(await p.locator('#results li').count() === 6, 'Solo result includes human plus five AI');
       check(await p.evaluate(() => soloNet.room.results.some(r => r.name === 'Solo customer' && r.lap === 3)), 'Solo customer completes three valid laps');
-      await p.getByRole('button', { name: 'Return room to lobby', exact: true }).tap();
-      await p.locator('#lobbyScreen').waitFor({ state: 'visible' });
-      check(await p.locator('#lobbyCode').textContent() === code, 'Solo returns to same unified lobby');
-      check(await p.getByRole('button', { name: 'Start Race', exact: true }).isVisible(), 'Solo rematch requires explicit Start');
+      const first = await p.evaluate(() => ({ code: soloNet.room.code, raceId: soloNet.room.raceId }));
+      await p.evaluate(() => { window.soloDrive = false; });
+      await p.getByRole('button', { name: 'Race again', exact: true }).tap();
+      await p.waitForFunction(id => window.soloNet?.latest?.raceId !== id && window.soloNet?.room?.phase === 'racing' && window.soloNet?.latest?.cars.length === 6, first.raceId);
+      check(await p.evaluate(code => soloNet.room.code === code && soloNet.latest.cars[0].lap === 0 && soloNet.latest.cars[0].turboUses === 0 && soloNet.latest.cars[0].turboAvailable, first.code), 'One-tap solo replay reuses its private session with fresh laps and Turbo');
+      await p.evaluate(() => { window.soloDrive = true; });
+      await p.locator('#raceOver').waitFor({ state: 'visible', timeout: 110000 });
+      check(await p.evaluate(() => soloNet.room.results.some(r => r.name === 'Solo customer' && r.lap === 3)), 'Solo replay physically completes three valid laps');
+      await p.getByRole('button', { name: 'Main menu', exact: true }).tap();
+      await p.locator('#modeMenu').waitFor({ state: 'visible' });
+      check(await p.evaluate(() => soloNet.room === null), 'Solo results Main menu leaves and cleans up its session');
     } finally { await ctx.close(); }
   }
   await browser.close(); browser = null; await new Promise(r => setTimeout(r, 100));

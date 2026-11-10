@@ -97,3 +97,18 @@ h3 { font-size: 16px; margin: 0; }
 .countdown-cancel { position: fixed; z-index: 3; bottom: calc(22px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: 180px; }
 #connectionStatus:not(.offline) { opacity: .8; }
 #nicknameForm .btn { margin-top: 8px; }
+.mode-panel .subtitle { margin: 12px 0 22px; overflow-wrap: anywhere; }
+.mode-options { display: grid; gap: 14px; }
+.mode-option { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; min-height: 100px; text-align: left; }
+.mode-option strong { font-size: 24px; }
+.mode-option small { font-size: 12px; line-height: 1.5; font-weight: 400; }
+.mode-option.secondary { margin-top: 0; border-color: #829d62; }
+#btn-change-name, #btn-lobby-menu { display: block; margin: 12px auto 0; }
+#btn-browser-menu { margin-bottom: 16px; }
+@media (max-height: 440px) and (min-width: 560px) {
+  .mode-options { grid-template-columns: 1fr 1fr; }
+  .mode-panel { max-width: 620px; }
+  .mode-panel h2 { margin-bottom: 8px; }
+  .mode-panel .subtitle { margin: 8px 0 14px; }
+  .mode-option { padding: 14px; min-height: 100px; }
+}

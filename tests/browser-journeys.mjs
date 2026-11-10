@@ -10,6 +10,7 @@ export const roomJourney = async (page, baseUrl, evidenceDir) => {
     await p.evaluate(async () => { const { Network } = await import('/js/network.js'); const old = Network.prototype.apply;
       Network.prototype.apply = function(s) { window.lastSnapshot = s; return old.call(this, s); }; });
     await p.getByLabel('Your nickname').fill(name); await p.getByRole('button', { name: 'Continue →', exact: true }).tap();
+    if (!new URL(url).searchParams.has('room')) await p.getByRole('button', { name: 'Multiplayer', exact: true }).tap();
     return p;
   };
   const makeRoom = async (p, privacy, name) => {
@@ -107,6 +108,7 @@ export const rematchJourney = async (page, baseUrl, evidenceDir) => {
         window.drive = true;
       });
       await p.getByLabel('Your nickname').fill(name); await p.getByRole('button', { name: 'Continue →', exact: true }).tap();
+      await p.getByRole('button', { name: 'Multiplayer', exact: true }).tap();
       await p.locator('#roomBrowser').waitFor({ state: 'visible' });
     }
     const [host, guest, third] = pages;
