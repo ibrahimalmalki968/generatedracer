@@ -112,7 +112,7 @@ export class RaceManager {
   getBestLap(i) { return this._state[i]?.bestLapTime ?? null; }
   getFinishTime(i) { return this._state[i]?.finishTime ?? null; }
   getResults() {
-    return this.cars.map((c, i) => ({ id: c.id, name: c.name, isHuman: c.isHuman, position: c.position,
+    return this.cars.map((c, i) => ({ id: c.id, name: c.name, nameKey: c.nameKey, nameParams: c.nameParams, isHuman: c.isHuman, position: c.position,
       lap: this._state[i].lap, bestLap: this._state[i].bestLapTime, finishTime: this._state[i].finishTime,
       status: c.finished ? 'finished' : c.disconnected ? 'disconnected' : 'unfinished', finished: c.finished,
     })).sort((a, b) => a.position - b.position);

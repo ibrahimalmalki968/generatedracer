@@ -1,3 +1,4 @@
+import { message as notice, MessageError, isTranslationKey } from '../shared/translations.js';
 /** Authoritative WebSocket client with local prediction/reconciliation and remote interpolation. */
 import { Car } from './car.js';
 import { SIMULATION_STEP } from './constants.js';
@@ -18,9 +19,9 @@ export class Network extends EventTarget {
     if (this.socket && this.socket.readyState < 2) return;
     const scheme = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const socket = new WebSocket(`${scheme}//${location.host}/socket`); this.socket = socket;
-    this.emit('status', 'Connecting…');
+    this.emit('status', notice('connection.connecting'));
     socket.onopen = () => this.send({ type: 'hello', version: PROTOCOL_VERSION, nickname, token: this.token });
-    socket.onerror = () => this.emit('status', 'Cannot reach the game server. Retrying…');
+    socket.onerror = () => this.emit('status', notice('connection.retry'));
     socket.onmessage = e => {
       if (this.socket !== socket) return;
       let message; try { message = JSON.parse(e.data); } catch { return; }
@@ -28,7 +29,7 @@ export class Network extends EventTarget {
       if (message.type === 'welcome') {
         this.playerId = message.playerId; this.token = message.token; this.ready = true; this.retry = 0;
         try { sessionStorage.setItem('racer-session', this.token); } catch { /* session stays memory-only */ }
-        this.emit('status', 'Connected'); this.emit('welcome', message);
+        this.emit('status', notice('connection.connected')); this.emit('welcome', message);
       } else if (message.type === 'room') {
         const oldRace = this.room?.raceId;
         this.room = message.room; this.offset = message.room.serverNow - Date.now();
@@ -42,18 +43,19 @@ export class Network extends EventTarget {
         const waiter = this.requests.get(message.requestId);
         if (waiter) {
           clearTimeout(waiter.timer); this.requests.delete(message.requestId);
-          if (message.type === 'error') waiter.reject(new Error(message.message)); else waiter.resolve();
-        } else if (message.type === 'error') this.emit('error', message.message);
+          if (message.type === 'error') waiter.reject(new MessageError(message.code || 'error.unknown', message.params)); else waiter.resolve();
+        } else if (message.type === 'error') this.emit('error', { key: message.code || 'error.unknown', params: message.params });
       }
     };
     socket.onclose = e => {
       if (this.socket !== socket) return;
       this.ready = false;
-      for (const w of this.requests.values()) { clearTimeout(w.timer); w.reject(new Error('Connection lost.')); }
+      this.closeMessage = notice(isTranslationKey(e.reason) ? e.reason : e.code === 4001 ? 'connection.elsewhere' : 'connection.disconnected');
+      for (const w of this.requests.values()) { clearTimeout(w.timer); w.reject(new MessageError('error.connectionLost')); }
       this.requests.clear(); this.room = null; this.resetRace(); this.emit('disconnected', e.code);
-      if (e.code === 4001) { this.stopped = true; this.emit('status', 'This session was opened in another tab. Refresh to reconnect.'); }
+      if (e.code === 4001) { this.stopped = true; this.emit('status', notice('error.sessionElsewhere')); }
       else if (!this.stopped) {
-        this.emit('status', 'Connection lost. Reconnecting… Your previous race continues.');
+        this.emit('status', notice('connection.reconnecting'));
         this.reconnectTimer = setTimeout(() => this.connect(this.nickname), Math.min(5000, 500 * 2 ** this.retry++));
       }
     };
@@ -65,9 +67,9 @@ export class Network extends EventTarget {
   }
   command(type, body = {}) {
     return new Promise((resolve, reject) => {
-      if (!this.ready) { reject(new Error('Not connected yet.')); return; }
+      if (!this.ready) { reject(new MessageError('error.notConnected')); return; }
       const requestId = String(++this.requestId);
-      const timer = setTimeout(() => { this.requests.delete(requestId); reject(new Error('Server response timed out. Try again.')); }, 8000);
+      const timer = setTimeout(() => { this.requests.delete(requestId); reject(new MessageError('error.timeout')); }, 8000);
       this.requests.set(requestId, { resolve, reject, timer });
       this.send({ type, ...body, requestId,
         ...(['ready', 'start', 'cancel'].includes(type) ? { lobbyId: this.room?.lobbyId } : {}),

@@ -4,6 +4,7 @@ import { AiController } from './ai.js';
 import { RaceManager } from './race.js';
 import { NUM_AI } from './constants.js';
 import { trackProgress } from './track.js';
+import { translate } from '../shared/translations.js';
 
 export const START_POSITIONS = [
   { x: 1490, y: 268, angle: 0 }, { x: 1490, y: 335, angle: 0 },
@@ -18,8 +19,12 @@ export class LocalSession {
     // Solo has five AI; local two-human races have no AI filling empty slots.
     this.cars = Array.from({ length: humans === 1 ? 1 + NUM_AI : humans }, (_, id) => {
       const p = START_POSITIONS[id];
-      return new Car(id, p.x, p.y, p.angle, { isHuman: id < humans,
-        name: id < humans ? humans === 1 ? 'YOU' : `PLAYER ${id + 1}` : `CPU ${id}` });
+      const nameKey = id < humans ? humans === 1 ? 'name.you' : 'name.player' : 'name.ai';
+      const nameParams = { number: id < humans ? id + 1 : id };
+      const car = new Car(id, p.x, p.y, p.angle, { isHuman: id < humans,
+        name: translate('en', nameKey, nameParams) });
+      car.nameKey = nameKey; car.nameParams = nameParams;
+      return car;
     });
     this.ai = this.cars.filter(c => !c.isHuman).map(c => new AiController(c));
     this.race = new RaceManager(this.cars);

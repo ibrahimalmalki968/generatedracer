@@ -19,6 +19,14 @@ try {
   browser = await chromium.launch({ channel: report.channel, headless: true,
     args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'] });
   report.version = browser.version();
+  // Preserve the established English regression journey explicitly; the dedicated
+  // bilingual suite uses fresh contexts and verifies the Arabic default itself.
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async options => {
+    const context = await newContext(options);
+    await context.addInitScript(() => localStorage.setItem('racer-language', 'en'));
+    return context;
+  };
   const root = await browser.newPage(); await root.goto(baseUrl);
   for (const [name, scenario] of [['mode selection and one-tap solo', modeJourney], ['rooms and lobby', roomJourney], ...(report.mode === 'full' ? [['two full races and rematches', rematchJourney]] : [])]) {
     console.log(`Checking ${name}…`);
@@ -81,7 +89,7 @@ try {
       const original = CanvasRenderingContext2D.prototype.fillText;
       const boxes = [];
       CanvasRenderingContext2D.prototype.fillText = function(text, x, y, ...rest) {
-        if (testNet.latest.cars.some(c => c.name === text)) {
+        if (testNet.latest.cars.some(c => c.name === text.replace(/[\u2066-\u2069]/g, ''))) {
           const t = this.getTransform(), w = this.measureText(text).width * t.a, h = parseFloat(this.font.match(/[\d.]+px/)[0]) * t.d;
           boxes.push({ x: t.a * x + t.e - w / 2, y: t.d * y + t.f - h, w, h });
         }

@@ -5,7 +5,9 @@ const s = await createGameServer({ countdownMs: 0 });
 try {
   const base = `http://127.0.0.1:${s.port}`;
   assert.equal((await fetch(`${base}/health`)).status, 200);
-  assert.match(await (await fetch(base)).text(), /Your nickname/);
+  const html = await (await fetch(base)).text();
+  assert.match(html, /<html lang="ar" dir="rtl">/); assert.match(html, /data-i18n="entry.nickname"/);
+  assert.equal((await fetch(base + '/shared/translations.js')).status, 200);
   assert.match(await (await fetch(`${base}/LICENSE`)).text(), /Jeroen Willemsen/);
   const ws = new WebSocket(`ws://127.0.0.1:${s.port}/socket`);
   const snapshot = new Promise((resolve, reject) => {

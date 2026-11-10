@@ -1,5 +1,7 @@
 # Public deployment — 10 November 2026
 
+Current 11 November localization update: the same HTTPS URL serves the bilingual application, Arabic by default with persistent live English selection. The production Node server has been restarted with language-neutral error/name metadata. Arabic and English clients use the same rooms and WSS protocol; locale changes do not restart the connection. Final public verification passed **108 full bilingual checks in Chrome and 108 in Edge**, followed by **106 expanded mobile smoke checks in each browser after the restart**, with zero captured app errors/missing keys. See TEST_RESULTS.md and LOCALIZATION.md. No hosting, paid resource or main-branch change was made.
+
 11 November update: the same public URL now serves the new Solo Race / Multiplayer menu. The production Node process was restarted with automatic private solo sessions, direct replay and menu navigation. Local regression: 61 tests and 152 Chrome browser assertions passed. Public Chrome full: 150 passed; public Edge smoke: 129 passed; zero captured app errors. Full public tests include two physically driven solo races with one-tap replay plus the existing multiplayer journeys. The hosting/uptime limitations below are unchanged.
 
 ## Status

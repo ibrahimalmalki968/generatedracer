@@ -2,6 +2,8 @@
 
 No known blocking defect remains in the verified local MVP journey. Validation gaps below are not claims of production readiness.
 
+- **Language/device scope:** Arabic is default and English is supported in one application; UI/server messages are localized through stable keys. Language preference belongs to the browser origin, so a changed temporary tunnel hostname has separate storage; denied/cleared storage cannot retain a preference across visits. Original MIT license/proper names/technical codes are intentionally preserved, and native browser/OS permission dialogs follow the device language. Chrome/Edge automation does not establish physical iPhone/Safari Arabic-font or touch behavior.
+
 - **Physical devices:** no real iPhone/Android handset, Safari, physical gamepad, battery/thermal session or café Wi-Fi test was available. Chrome/Edge automation and phone viewports do not replace those tests.
 - **Connection recovery:** an overlapping valid-token live-socket handover can retain its assigned car. After a closed socket has already been marked DNF, the identity can reconnect but the car cannot re-enter that active race. Join again after the room returns to its lobby. This deliberately avoids undoing finalized standings or admitting late racers.
 - **LAN access:** HTTP and WebSocket succeeded through `192.168.100.206` from the same computer. Cross-device reachability, firewall inbound permission and router client isolation remain unverified. Firewall protections were not disabled or changed. The DHCP address can change.

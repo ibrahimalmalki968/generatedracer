@@ -8,6 +8,10 @@ import { APP_VERSION, SIMULATION_STEP } from './constants.js';
 import { Network } from './network.js';
 import { LobbyUI } from './lobby.js';
 import { Car } from './car.js';
+import { t, displayNameOf, ordinal, initLanguage, languageEvents, getLanguage } from './i18n.js';
+import { message } from '../shared/translations.js';
+
+initLanguage();
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -53,6 +57,14 @@ window.addEventListener('resize', resize);
 window.visualViewport?.addEventListener('resize', resize);
 
 function show(id, visible) { document.getElementById(id).classList.toggle('hidden', !visible); }
+function showCountdown(value) {
+  document.getElementById('countdownNum').textContent = String(value);
+  document.getElementById('countdown').setAttribute('aria-label', t('race.countdownLabel', { count: value }));
+}
+function waitingMessage(finished) {
+  return t('race.waiting', { names: finished.length ? displayNameOf(finished[0]) : '',
+    count: (network.latest?.cars || []).filter(c => !c.finished && !c.disconnected).length });
+}
 function setInputs(enabled) {
   handlers.forEach(h => h.setEnabled(false));
   if (enabled) activeInputs().forEach(h => h.setEnabled(true));
@@ -77,9 +89,9 @@ function syncScreens() {
 
 function start(humans) {
   online = false;
-  document.getElementById('btn-pause').textContent = 'Ⅱ Pause';
-  document.getElementById('btn-restart').textContent = 'Race again';
-  document.getElementById('btn-menu').textContent = 'Main menu';
+  document.getElementById('btn-pause').textContent = t('race.pause');
+  document.getElementById('btn-restart').textContent = t('results.playAgain');
+  document.getElementById('btn-menu').textContent = t('nav.main');
   setInputs(false);
   session = new LocalSession(humans);
   cameras = session.cars.slice(0, humans).map(c => ({ x: c.x, y: c.y }));
@@ -87,7 +99,7 @@ function start(humans) {
   countdown = 3;
   accumulator = 0;
   lastTimestamp = null;
-  document.getElementById('countdownNum').textContent = '3';
+  showCountdown(3);
   hud.update(session.cars[0], session.race);
   if (humans === 2) hud2.update(session.cars[1], session.race);
   document.activeElement?.blur();
@@ -101,8 +113,7 @@ function pause() {
   accumulator = 0;
   setInputs(false);
   syncScreens();
-  document.getElementById('pauseTitle').textContent = online ? 'Race continues' : 'Race paused';
-  document.getElementById('pauseDescription').textContent = online ? 'Other racers keep driving. Resume to continue, or leave and record DNF.' : 'Your local race is waiting for you.';
+  refreshCopy();
   document.getElementById('btn-resume').focus();
 }
 function resume() {
@@ -126,23 +137,26 @@ function menu(toMain = false) {
 function finish() {
   state = 'finished';
   setInputs(false);
+  renderResults();
+  syncScreens();
+  document.getElementById('btn-restart').focus();
+}
+function renderResults() {
   const results = document.getElementById('results');
   results.replaceChildren();
   const standings = session.race.getResults();
   const winner = standings.find(r => r.status === 'finished');
-  document.getElementById('resultsSummary').textContent = winner ? `${winner.name} wins · 3 valid laps` : 'Race ended · no finisher';
-  document.getElementById('resultsHint').textContent = online && !network.room?.solo ? 'Return everyone to this room’s lobby for a rematch. All Ready statuses reset.' : 'Race again for a fresh start.';
+  document.getElementById('resultsSummary').textContent = winner ? t('results.winner', { name: displayNameOf(winner) }) : t('results.noWinner');
+  document.getElementById('resultsHint').textContent = t(online && !network.room?.solo ? 'results.lobbyHint' : 'results.replayHint');
   for (const r of standings) {
     const row = document.createElement('li');
     row.className = `result-row${r.isHuman ? ' result-human' : ''}`;
-    for (const [className, text] of [['pos', r.status === 'disconnected' ? 'DNF' : `${r.position}.`], ['name', r.name],
-      ['info', r.finished ? `${formatTime(r.finishTime)} · best ${formatTime(r.bestLap)}` : r.status === 'disconnected' ? 'Disconnected' : `Unfinished · lap ${r.lap + 1}/3`]]) {
-      const span = document.createElement('span'); span.className = className; span.textContent = text; row.append(span);
+    for (const [className, text] of [['pos', r.status === 'disconnected' ? t('results.dnf') : `${r.position}.`], ['name', displayNameOf(r)],
+      ['info', r.finished ? t('results.time', { time: formatTime(r.finishTime), best: formatTime(r.bestLap) }) : r.status === 'disconnected' ? t('results.disconnected') : t('results.unfinished', { lap: Math.min(r.lap + 1, 3) })]]) {
+      const span = document.createElement('span'); span.className = className; span.textContent = text; if (className === 'name') span.dir = 'auto'; row.append(span);
     }
     results.append(row);
   }
-  syncScreens();
-  document.getElementById('btn-restart').focus();
 }
 
 function onlineScene() {
@@ -154,7 +168,7 @@ function onlineScene() {
   });
   const race = {
     elapsed: network.latest.elapsed,
-    getOrdinal: id => ['1st', '2nd', '3rd', '4th', '5th', '6th'][network.latest.cars[id]?.position - 1],
+    getOrdinal: id => ordinal(network.latest.cars[id]?.position),
     getBestLap: id => network.latest.cars[id]?.bestLap,
     getFinishTime: id => network.latest.cars[id]?.finishTime,
     getResults: () => network.room?.results || [],
@@ -191,10 +205,7 @@ network.addEventListener('room', e => {
     onlineScene();
     if (session) finish();
   }
-  document.getElementById('btn-pause').textContent = online ? 'Leave / resume' : 'Ⅱ Pause';
-  document.getElementById('btn-restart').textContent = room.solo ? 'Race again' : 'Return room to lobby';
-  document.getElementById('btn-menu').textContent = 'Main menu';
-  document.getElementById('btn-leave').textContent = room.solo ? 'Main menu' : 'Leave race';
+  refreshCopy();
   syncScreens();
 });
 network.addEventListener('left', e => {
@@ -204,7 +215,7 @@ network.addEventListener('left', e => {
 });
 network.addEventListener('disconnected', e => {
   online = false; session = null; cameras = []; drawingCars.clear(); state = 'menu'; setInputs(false); syncScreens();
-  lobby.message(e.detail === 4001 ? 'This session is now controlled by another tab.' : 'Connection lost. Your previous race continues; a closed connection is recorded as DNF.');
+  lobby.message(network.closeMessage || message(e.detail === 4001 ? 'connection.elsewhere' : 'connection.disconnected'));
 });
 
 function loop(ts) {
@@ -212,16 +223,16 @@ function loop(ts) {
   lastTimestamp = ts;
   if (online && network.latest) onlineScene();
   if (online && state === 'countdown') {
-    document.getElementById('countdownNum').textContent = String(Math.max(1, Math.ceil((network.room.startAt - Date.now() - network.offset) / 1000)));
+    showCountdown(Math.max(1, Math.ceil((network.room.startAt - Date.now() - network.offset) / 1000)));
   } else if (online && state === 'racing') {
     input.pollGamepad(); accumulator += dt;
     while (accumulator >= SIMULATION_STEP) { network.predict(input.get()); accumulator -= SIMULATION_STEP; }
     const finished = network.latest?.cars.filter(c => c.finished) || [];
     show('raceStatus', finished.length > 0);
-    if (finished.length) document.getElementById('raceStatus').textContent = `${finished.map(c => c.name).join(', ')} finished. Waiting for remaining racers.`;
+    if (finished.length) document.getElementById('raceStatus').textContent = waitingMessage(finished);
   } else if (state === 'countdown') {
     countdown -= dt;
-    document.getElementById('countdownNum').textContent = String(Math.max(1, Math.ceil(countdown)));
+    showCountdown(Math.max(1, Math.ceil(countdown)));
     if (countdown <= 0) {
       state = 'racing'; session.start(); accumulator = 0; setInputs(true); syncScreens();
     }
@@ -237,7 +248,7 @@ function loop(ts) {
     if (session.humans === 2) hud2.update(session.cars[1], session.race);
     const waiting = session.cars.some(c => c.finished);
     show('raceStatus', state === 'racing' && waiting);
-    if (waiting) document.getElementById('raceStatus').textContent = 'A racer has finished. Keep racing — all players can finish.';
+    if (waiting) document.getElementById('raceStatus').textContent = t('race.localWaiting');
   }
   if (state === 'racing' || state === 'countdown' || renderDirty) {
     render(dt);
@@ -264,9 +275,10 @@ function renderViewport(camera, offset, viewWidth, dt) {
   // Separate close starting-grid labels instead of drawing names over one another.
   const labels = [];
   const labelSize = Math.max(18, 11 / scale);
-  ctx.fillStyle = '#fff'; ctx.font = `bold ${labelSize}px Arial`; ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff'; ctx.font = `bold ${labelSize}px "Segoe UI", Tahoma, Arial, sans-serif`; ctx.textAlign = 'center'; ctx.direction = getLanguage() === 'ar' ? 'rtl' : 'ltr';
   for (const c of session.cars) {
-    const text = c.finished ? `${c.name} ✓` : c.name;
+    const name = displayNameOf(c);
+    const text = '\u2068' + name + '\u2069' + (c.finished ? ' ✓' : '');
     const w = ctx.measureText(text).width + 8 / scale, h = labelSize + 5 / scale;
     const x = c.x;
     let y = c.y - 30;
@@ -308,7 +320,28 @@ window.addEventListener('blur', inactive);
 document.addEventListener('visibilitychange', () => { if (document.hidden) inactive(); });
 window.addEventListener('keydown', e => { if (e.code === 'Escape') { if (state === 'paused') resume(); else pause(); } });
 document.getElementById('btn-cancel-countdown').addEventListener('click', () => lobby.action('cancel'));
-document.getElementById('menu-version').textContent = `v${APP_VERSION} · Café multiplayer`;
+function refreshCopy() {
+  document.getElementById('menu-version').textContent = t('footer.version', { version: APP_VERSION });
+  document.getElementById('btn-pause').textContent = t(online ? 'race.onlineMenu' : 'race.pause');
+  document.getElementById('btn-pause').setAttribute('aria-label', t(online ? 'race.onlineMenu' : 'race.pauseLabel'));
+  document.getElementById('btn-restart').textContent = t(online && !network.room?.solo ? 'results.returnLobby' : 'results.playAgain');
+  document.getElementById('btn-menu').textContent = t('nav.main');
+  document.getElementById('btn-leave').textContent = t(online && network.room?.solo ? 'nav.main' : 'pause.leave');
+  document.getElementById('pauseTitle').textContent = t(online ? 'pause.onlineTitle' : 'pause.title');
+  document.getElementById('pauseDescription').textContent = t(online ? 'pause.onlineDescription' : 'pause.description');
+  const count = Number(document.getElementById('countdownNum').textContent) || 3;
+  document.getElementById('countdown').setAttribute('aria-label', t('race.countdownLabel', { count }));
+  if (online && network.latest) onlineScene();
+  else if (session?.cars.length) { hud.update(session.cars[0], session.race); if (session.humans === 2) hud2.update(session.cars[1], session.race); }
+  if (state === 'finished' && session) renderResults();
+  if (document.getElementById('raceStatus').textContent) {
+    const finished = network.latest?.cars.filter(c => c.finished) || [];
+    document.getElementById('raceStatus').textContent = online ? waitingMessage(finished) : t('race.localWaiting');
+  }
+  renderDirty = true;
+}
+languageEvents.addEventListener('change', refreshCopy);
+refreshCopy();
 syncScreens();
 resize();
 requestAnimationFrame(loop);

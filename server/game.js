@@ -1,3 +1,4 @@
+import { fault, translate } from '../shared/translations.js';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { LocalSession } from '../js/simulation.js';
 import { SIMULATION_STEP } from '../js/constants.js';
@@ -15,24 +16,24 @@ export class Game {
 
   send(ws, message) {
     if (ws?.readyState === 1) {
-      if (ws.bufferedAmount > 262144) { ws.close(1013, 'Connection too slow'); return; }
+      if (ws.bufferedAmount > 262144) { ws.close(1013, 'error.tooSlow'); return; }
       ws.send(JSON.stringify(message));
     }
   }
 
   hello(ws, message) {
-    if (message.version !== PROTOCOL_VERSION) throw new Error('Game version changed. Refresh this page.');
+    if (message.version !== PROTOCOL_VERSION) throw fault('error.version');
     const name = displayName(message.nickname);
     let s = typeof message.token === 'string' ? this.sessions.get(message.token) : null;
     if (s && !s.ws && Date.now() - s.touched > 10 * 60000) { this.sessions.delete(s.token); s = null; }
     if (!s) {
-      if (this.sessions.size >= this.maxSessions) throw new Error('Server busy. Try again shortly.');
+      if (this.sessions.size >= this.maxSessions) throw fault('error.busy');
       s = { token: token(), id: randomUUID(), name, roomId: null, ws: null, touched: Date.now() };
       this.sessions.set(s.token, s);
     }
     if (s.ws && s.ws !== ws) {
       // Only a holder of this secret can replace their own live connection.
-      const previous = s.ws; previous.session = null; previous.close(4001, 'Session opened elsewhere');
+      const previous = s.ws; previous.session = null; previous.close(4001, 'error.sessionElsewhere');
     }
     s.ws = ws; s.touched = Date.now(); ws.session = s;
     if (!s.roomId) s.name = name;
@@ -44,7 +45,7 @@ export class Game {
 
   list(ws) {
     this.send(ws, { type: 'rooms', rooms: [...this.rooms.values()].filter(r => !r.private).map(r => ({
-      code: r.code, name: r.name, count: r.members.size, capacity: MAX_HUMANS, phase: r.phase,
+      code: r.code, name: r.name, nameKey: r.nameKey, nameParams: r.nameParams, count: r.members.size, capacity: MAX_HUMANS, phase: r.phase,
       available: r.phase === 'lobby' && r.members.size < MAX_HUMANS,
     })) });
   }
@@ -52,24 +53,26 @@ export class Game {
   publicLists() { for (const s of this.sessions.values()) if (s.ws && !s.roomId) this.list(s.ws); }
 
   create(s, message, { solo = false } = {}) {
-    if (s.roomId) throw new Error('Leave your current room first.');
-    if (this.rooms.size >= this.maxRooms) throw new Error('All rooms are in use. Join a public room or try later.');
-    if (typeof message.private !== 'boolean') throw new Error('Choose public or private.');
+    if (s.roomId) throw fault('error.leaveFirst');
+    if (this.rooms.size >= this.maxRooms) throw fault('error.roomsFull');
+    if (typeof message.private !== 'boolean') throw fault('error.privacy');
     let roomCode; do { roomCode = code(); } while (this.rooms.has(roomCode));
-    const r = { code: roomCode, name: displayName(message.name || `${s.name}'s race`, 32), private: message.private,
+    const nameKey = solo ? 'mode.solo' : !message.name ? 'room.defaultName' : null;
+    const nameParams = { name: s.name };
+    const r = { code: roomCode, name: displayName(nameKey ? translate('en', nameKey, nameParams) : message.name, 32), nameKey, nameParams, private: message.private,
       solo, ownerId: solo ? s.id : null,
       members: new Map(), phase: 'lobby', revision: 0, raceId: null, engine: null, tick: 0, results: null, startAt: null };
     this.rooms.set(r.code, r); this.join(s, r.code);
   }
 
   join(s, rawCode) {
-    if (s.roomId) throw new Error('Leave your current room first.');
-    if (typeof rawCode !== 'string' || !/^[A-Fa-f0-9]{10}$/.test(rawCode.trim())) throw new Error('Invalid room code.');
+    if (s.roomId) throw fault('error.leaveFirst');
+    if (typeof rawCode !== 'string' || !/^[A-Fa-f0-9]{10}$/.test(rawCode.trim())) throw fault('error.roomCode');
     const r = this.rooms.get(rawCode.trim().toUpperCase());
-    if (!r) throw new Error('Room not found or expired.');
-    if (r.solo && r.ownerId !== s.id) throw new Error('This is a solo session. Choose Multiplayer to race with friends.');
-    if (r.phase !== 'lobby') throw new Error('Race in Progress. Join when this room returns to the lobby.');
-    if (r.members.size >= MAX_HUMANS) throw new Error('Room is full.');
+    if (!r) throw fault('error.roomMissing');
+    if (r.solo && r.ownerId !== s.id) throw fault('error.soloOnly');
+    if (r.phase !== 'lobby') throw fault('error.racing');
+    if (r.members.size >= MAX_HUMANS) throw fault('error.roomFull');
     s.roomId = r.code;
     r.members.set(s.id, { session: s, ready: false, seq: 0, boost: 0, input: NEUTRAL, receivedAt: 0, pendingBoost: null, carId: null });
     this.rosterChanged(r); this.publicLists();
@@ -83,13 +86,13 @@ export class Game {
 
   lobbyAction(s, lobbyId) {
     const r = this.room(s);
-    if (r.lobbyId !== lobbyId) { this.publish(r); throw new Error('Lobby changed. Check the current players and try again.'); }
+    if (r.lobbyId !== lobbyId) { this.publish(r); throw fault('error.lobbyChanged'); }
     return r;
   }
 
   ready(s, value, lobbyId) {
     const r = this.lobbyAction(s, lobbyId);
-    if (!['lobby', 'countdown'].includes(r.phase) || r.members.size < 2 || typeof value !== 'boolean') throw new Error('Ready is only available before multiplayer races.');
+    if (!['lobby', 'countdown'].includes(r.phase) || r.members.size < 2 || typeof value !== 'boolean') throw fault('error.readyState');
     if (r.members.get(s.id).ready === value) return;
     if (r.phase === 'countdown') { r.phase = 'lobby'; r.startAt = null; }
     r.members.get(s.id).ready = value; r.revision++;
@@ -100,7 +103,7 @@ export class Game {
 
   start(s, lobbyId) {
     const r = this.lobbyAction(s, lobbyId);
-    if (r.phase !== 'lobby' || r.members.size !== 1) throw new Error('Solo Start requires exactly one player in the lobby.');
+    if (r.phase !== 'lobby' || r.members.size !== 1) throw fault('error.soloStart');
     this.countdown(r);
   }
 
@@ -109,10 +112,10 @@ export class Game {
   solo(s, raceId) {
     if (s.roomId) {
       const r = this.room(s);
-      if (!r.solo) throw new Error('Leave your multiplayer room before starting Solo Race.');
+      if (!r.solo) throw fault('error.leaveMulti');
       this.back(s, raceId); // validates results and rejects duplicate/stale replay requests
     } else {
-      if (raceId != null) throw new Error('Results have already changed.');
+      if (raceId != null) throw fault('error.resultsChanged');
       this.create(s, { name: 'Solo Race', private: true }, { solo: true });
     }
     const r = this.room(s); this.start(s, r.lobbyId);
@@ -126,7 +129,7 @@ export class Game {
 
   cancel(s, lobbyId) {
     const r = this.lobbyAction(s, lobbyId);
-    if (r.phase !== 'countdown') throw new Error('There is no countdown to cancel.');
+    if (r.phase !== 'countdown') throw fault('error.noCountdown');
     if (r.solo) { this.leave(s); return; }
     this.rosterChanged(r); this.publicLists();
   }
@@ -137,7 +140,7 @@ export class Game {
     r.engine = new LocalSession(r.members.size); r.tick = 0;
     [...r.members.values()].forEach((m, i) => {
       m.carId = i; m.seq = 0; m.appliedSeq = 0; m.boost = 0; m.pendingBoost = null; m.input = NEUTRAL; m.receivedAt = 0;
-      r.engine.cars[i].name = m.session.name; r.engine.cars[i].participantId = m.session.id;
+      r.engine.cars[i].name = m.session.name; r.engine.cars[i].nameKey = null; r.engine.cars[i].participantId = m.session.id;
     });
     r.engine.start(); r.phase = 'racing';
     this.publish(r); this.publicLists();
@@ -155,7 +158,7 @@ export class Game {
 
   room(s) {
     const r = this.rooms.get(s.roomId);
-    if (!r || !r.members.has(s.id)) throw new Error('Join a room first.');
+    if (!r || !r.members.has(s.id)) throw fault('error.joinFirst');
     return r;
   }
 
@@ -190,7 +193,7 @@ export class Game {
 
   back(s, raceId) {
     const r = this.room(s);
-    if (r.phase !== 'results' || r.raceId !== raceId) throw new Error('Results have already changed.');
+    if (r.phase !== 'results' || r.raceId !== raceId) throw fault('error.resultsChanged');
     r.engine = null; r.raceId = null; r.results = null; r.tick = 0;
     for (const m of r.members.values()) {
       m.carId = null; m.seq = 0; m.appliedSeq = 0; m.boost = 0; m.input = NEUTRAL; m.pendingBoost = null; m.receivedAt = 0;
@@ -219,7 +222,7 @@ export class Game {
     const memberById = new Map([...r.members.values()].map(m => [m.carId, m]));
     return { type: 'snapshot', roomCode: r.code, raceId: r.raceId, tick: r.tick, serverNow: Date.now(),
       elapsed: r.engine.race.elapsed, winnerId: r.engine.race.winnerId,
-      cars: r.engine.cars.map(c => ({ id: c.id, name: c.name, participantId: c.participantId || null, isHuman: c.isHuman,
+      cars: r.engine.cars.map(c => ({ id: c.id, name: c.name, nameKey: c.nameKey, nameParams: c.nameParams, participantId: c.participantId || null, isHuman: c.isHuman,
         x: c.x, y: c.y, angle: c.angle, speed: c.speed, lap: c.lap, position: c.position,
         turboActive: c.turboActive, turboAvailable: c.turboAvailable, turboTimer: c.turboTimer, turboUses: c.turboUses,
         finished: c.finished, disconnected: c.disconnected, bestLap: r.engine.race.getBestLap(c.id), finishTime: r.engine.race.getFinishTime(c.id),
@@ -229,7 +232,7 @@ export class Game {
 
   publish(r) {
     if (!r) return;
-    const room = { code: r.code, name: r.name, private: r.private, solo: r.solo, capacity: r.solo ? 1 : MAX_HUMANS, phase: r.phase,
+    const room = { code: r.code, name: r.name, nameKey: r.nameKey, nameParams: r.nameParams, private: r.private, solo: r.solo, capacity: r.solo ? 1 : MAX_HUMANS, phase: r.phase,
       revision: r.revision, lobbyId: r.lobbyId, raceId: r.raceId, startAt: r.startAt, serverNow: Date.now(), results: r.results,
       players: [...r.members.values()].map(m => ({ id: m.session.id, nickname: m.session.name, ready: m.ready, carId: m.carId })) };
     for (const m of r.members.values()) {

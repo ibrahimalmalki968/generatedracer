@@ -16,6 +16,8 @@ The original WebRTC implementation was replaced. The unused bundled QR encoder r
 
 ## Identity and authority
 
+Arabic/English presentation is client-local and independent of room/race identity. `shared/translations.js` centralizes dictionaries, message keys, parameter formatting and Arabic plural categories. `js/i18n.js` applies saved preference, `lang`/`dir`, static bindings and change events. Lobby/HUD/Canvas/results refresh their copy without calling simulation or networking commands. Server errors carry stable codes/values plus a backwards-compatible English diagnostic; each client renders its own language. Generated names carry metadata; user names stay literal. Numeric/time/name isolation and LTR driving controls keep RTL away from world coordinates. See LOCALIZATION.md.
+
 Every anonymous session has a 256-bit random secret token and a separate public UUID. A WebSocket is bound to that identity. A committed race maps public participant IDs to car slots; clients never select a target car in input messages. Nicknames are display text, not credentials. Browser `sessionStorage` retains only the tab's short-lived token/nickname; there is no permanent profile. Later accounts could attach to a participant identity without changing car assignment.
 
 The server accepts bounded finite gas/brake/steer values, monotonic input sequence and boost counters, and the current race ID. It ignores stale race packets, rejects client position/lap/result messages, and enforces one grant per lap through the shared car/race code. Boost requests are consumed once; packet duplication does not recharge Turbo.

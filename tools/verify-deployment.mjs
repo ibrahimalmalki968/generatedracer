@@ -59,7 +59,7 @@ async function finish(g) {
 try {
   const health = await fetch(new URL('/health', base), { signal: AbortSignal.timeout(120000) });
   check(health.ok && (await health.json()).ok, 'Public health endpoint');
-  const page = await fetch(base); check(page.ok && (await page.text()).includes('Café Racing'), 'Game HTML served');
+  const page = await fetch(base); check(page.ok && (await page.text()).includes('data-i18n="entry.nickname"'), 'Localized game HTML served');
   for (const path of ['/server/server.js', '/.env', '/.git/config', '/tools/browser-check.mjs', '/js/lib%5c..%5c..%5cserver%5cgame.js']) check((await fetch(new URL(path, base))).status === 404, `${path} not exposed`);
   const a = await group(2), b = await group(3), visitor = await customer('Verification visitor');
   await visitor.request({ type: 'list' });

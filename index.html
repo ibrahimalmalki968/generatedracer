@@ -1,100 +1,101 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#111719" />
-  <meta name="description" content="GenerateRacer café racing — three laps, one Turbo per lap, pure racing." />
-  <title>GenerateRacer · Café Racing</title>
+  <meta name="description" content="" data-i18n-content="page.description" />
+  <title data-i18n="page.title">GenerateRacer</title>
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="game.css" />
 </head>
 <body>
-  <canvas id="gameCanvas" aria-label="Top-down racing track"></canvas>
+  <nav id="languageSwitcher" class="language-switcher" aria-label="" data-i18n-aria-label="language.label" dir="ltr"><button type="button" data-language="ar" lang="ar" dir="rtl" aria-pressed="true">العربية</button><span aria-hidden="true">|</span><button type="button" data-language="en" lang="en" aria-pressed="false">English</button></nav>
+  <canvas id="gameCanvas" aria-label="" data-i18n-aria-label="control.track"></canvas>
   <div id="hud" class="hud hidden">
     <div class="hud-top">
-      <div class="hud-pill"><small>POSITION</small><strong id="hud-position">1st</strong></div>
-      <div class="hud-pill"><strong id="hud-lap">LAP 1 / 3</strong><span id="hud-time">0:00.000</span></div>
-      <div class="hud-pill"><strong id="hud-speed">0</strong><small>KM/H</small></div>
+      <div class="hud-pill"><small data-i18n="hud.position"></small><strong id="hud-position" data-i18n="position.1"></strong></div>
+      <div class="hud-pill"><strong id="hud-lap" data-i18n="hud.lap" data-i18n-params='{"lap":1,"total":3}'></strong><span id="hud-time">0:00.000</span></div>
+      <div class="hud-pill"><strong id="hud-speed">0</strong><small data-i18n="hud.speedUnit"></small></div>
     </div>
-    <button id="hud-turbo" class="turbo-btn" aria-label="Activate Turbo"><strong>TURBO</strong><small>1 use this lap</small></button>
+    <button id="hud-turbo" class="turbo-btn" aria-label="" data-i18n-aria-label="control.turbo"><strong data-i18n="hud.turbo"></strong><small data-i18n="hud.turboAvailable"></small></button>
   </div>
   <div id="hud2" class="hud hidden">
     <div class="hud-top">
-      <div class="hud-pill"><small>P2 POSITION</small><strong id="hud2-position">1st</strong></div>
-      <div class="hud-pill"><strong id="hud2-lap">LAP 1 / 3</strong><span id="hud2-time">0:00.000</span></div>
-      <div class="hud-pill"><strong id="hud2-speed">0</strong><small>KM/H</small></div>
+      <div class="hud-pill"><small data-i18n="hud.p2Position"></small><strong id="hud2-position" data-i18n="position.1"></strong></div>
+      <div class="hud-pill"><strong id="hud2-lap" data-i18n="hud.lap" data-i18n-params='{"lap":1,"total":3}'></strong><span id="hud2-time">0:00.000</span></div>
+      <div class="hud-pill"><strong id="hud2-speed">0</strong><small data-i18n="hud.speedUnit"></small></div>
     </div>
-    <button id="hud2-turbo" class="turbo-btn" aria-label="Player 2 Activate Turbo"><strong>TURBO</strong><small>1 use this lap</small></button>
+    <button id="hud2-turbo" class="turbo-btn" aria-label="" data-i18n-aria-label="control.turbo2"><strong data-i18n="hud.turbo"></strong><small data-i18n="hud.turboAvailable"></small></button>
   </div>
-  <div id="touchControls" class="hidden" aria-label="Driving controls">
+  <div id="touchControls" class="hidden" aria-label="" data-i18n-aria-label="control.driving">
     <div class="touch-side">
-      <button id="btn-left" class="touch-btn" aria-label="Steer left">◀</button>
-      <button id="btn-right" class="touch-btn" aria-label="Steer right">▶</button>
+      <button id="btn-left" class="touch-btn" aria-label="" data-i18n-aria-label="control.left">◀</button>
+      <button id="btn-right" class="touch-btn" aria-label="" data-i18n-aria-label="control.right">▶</button>
     </div>
     <div class="touch-side">
-      <button id="btn-brake" class="touch-btn brake" aria-label="Brake and reverse">▼</button>
-      <button id="btn-gas" class="touch-btn gas" aria-label="Accelerate">▲</button>
+      <button id="btn-brake" class="touch-btn brake" aria-label="" data-i18n-aria-label="control.brake">▼</button>
+      <button id="btn-gas" class="touch-btn gas" aria-label="" data-i18n-aria-label="control.gas">▲</button>
     </div>
   </div>
-  <div id="raceToolbar" class="hidden"><button id="btn-pause" aria-label="Pause race">Ⅱ Pause</button></div>
-  <div id="keyHint" class="hidden" aria-hidden="true">WASD / arrows to drive · E / L Turbo · Esc pause <span class="split-hint"> · P1 WASD + E · P2 arrows + L</span></div>
+  <div id="raceToolbar" class="hidden"><button id="btn-pause" aria-label="" data-i18n-aria-label="race.pauseLabel" data-i18n="race.pause"></button></div>
+  <div id="keyHint" class="hidden" aria-hidden="true"><span data-i18n="control.keys"></span><span class="split-hint" data-i18n="control.splitKeys"></span></div>
   <p id="raceStatus" class="hidden" role="status"></p>
   <div id="countdown" class="hidden" aria-live="assertive"><span id="countdownNum">3</span></div>
-  <button id="btn-cancel-countdown" class="hidden btn secondary countdown-cancel">Cancel start</button>
+  <button id="btn-cancel-countdown" class="hidden btn secondary countdown-cancel" data-i18n="race.cancel"></button>
 
-  <div id="connectionStatus" class="connection hidden" role="status">Connecting…</div>
+  <div id="connectionStatus" class="connection hidden" role="status" data-i18n="connection.connecting"></div>
   <div id="appMessage" class="app-message hidden" role="alert"></div>
   <main id="mainMenu" class="overlay">
     <section class="panel" aria-labelledby="menuTitle">
-      <p class="eyebrow">CAFÉ RACING</p><h1 id="menuTitle">Generate<span>Racer</span></h1>
-      <p class="subtitle">Three laps. One Turbo per lap.<br />Race together, right in your browser.</p>
-      <form id="nicknameForm"><label for="nickname">Your nickname</label>
-        <input id="nickname" name="nickname" maxlength="40" autocomplete="nickname" placeholder="What should we call you?" required />
-        <button class="btn primary" type="submit">Continue →</button>
-      </form><p id="entryHint" class="help">No account. Just a nickname and a race.</p>
-      <details><summary>Local keyboard splitscreen</summary><p>Two people on one keyboard. P1 uses WASD + E; P2 uses arrows + L.</p><button id="btn-splitscreen" class="btn secondary">Start local splitscreen</button></details>
-      <details><summary>How to drive</summary><p>Hold ▲ to accelerate and ◀ ▶ to steer. Hold ▼ to brake or reverse. Tap TURBO once per lap. Keyboard: arrows/WASD, E/L Turbo. Gamepad: stick/D-pad, triggers and A for Turbo.</p></details>
-      <footer><a href="https://github.com/commjoen/generatedracer" target="_blank" rel="noopener noreferrer">Based on GenerateRacer by Jeroen Willemsen</a><a href="LICENSE" target="_blank" rel="noopener">MIT license</a><p id="menu-version"></p></footer>
+      <p class="eyebrow" data-i18n="brand.tagline"></p><h1 id="menuTitle" dir="ltr">Generate<span>Racer</span></h1>
+      <p class="subtitle" data-i18n="entry.subtitle"></p>
+      <form novalidate id="nicknameForm"><label for="nickname" data-i18n="entry.nickname"></label>
+        <input id="nickname" name="nickname" maxlength="40" autocomplete="nickname" placeholder="" data-i18n-placeholder="entry.placeholder" required dir="auto" />
+        <button class="btn primary" type="submit" data-i18n="entry.continue"></button>
+      </form><p id="entryHint" class="help" data-i18n="entry.hint"></p>
+      <details><summary data-i18n="local.title"></summary><p data-i18n="local.description"></p><button id="btn-splitscreen" class="btn secondary" data-i18n="local.start"></button></details>
+      <details><summary data-i18n="help.title"></summary><p data-i18n="help.driving"></p></details>
+      <footer><a href="https://github.com/commjoen/generatedracer" target="_blank" rel="noopener noreferrer" data-i18n="footer.credit"></a><a href="LICENSE" data-i18n-title="footer.licenseHint" title="" target="_blank" rel="noopener" data-i18n="footer.license"></a><p id="menu-version"></p></footer>
     </section>
   </main>
   <div id="modeMenu" class="overlay hidden"><section class="panel mode-panel" aria-labelledby="modeTitle">
-    <p class="eyebrow">CAFÉ RACING</p><h2 id="modeTitle">Choose your race</h2>
+    <p class="eyebrow" data-i18n="brand.tagline"></p><h2 id="modeTitle" data-i18n="mode.title"></h2>
     <p id="modeGreeting" class="subtitle"></p>
     <div class="mode-options">
-      <button id="btn-solo" class="btn primary mode-option" aria-label="Solo Race" aria-describedby="soloDescription"><strong>Solo Race</strong><small id="soloDescription">Race against 5 AI · start in one tap</small></button>
-      <button id="btn-multiplayer" class="btn secondary mode-option" aria-label="Multiplayer" aria-describedby="multiplayerDescription"><strong>Multiplayer</strong><small id="multiplayerDescription">Create a room or join friends · up to 6 players</small></button>
+      <button id="btn-solo" class="btn primary mode-option" aria-label="" data-i18n-aria-label="mode.solo" aria-describedby="soloDescription"><strong data-i18n="mode.solo"></strong><small id="soloDescription" data-i18n="mode.soloDescription"></small></button>
+      <button id="btn-multiplayer" class="btn secondary mode-option" aria-label="" data-i18n-aria-label="mode.multi" aria-describedby="multiplayerDescription"><strong data-i18n="mode.multi"></strong><small id="multiplayerDescription" data-i18n="mode.multiDescription"></small></button>
     </div>
-    <p id="modeHint" class="help">3 laps · one Turbo per lap · no weapons</p>
-    <button id="btn-change-name" class="text-btn">Change nickname</button>
+    <p id="modeHint" class="help" data-i18n="mode.hint"></p>
+    <button id="btn-change-name" class="text-btn" data-i18n="mode.changeName"></button>
   </section></div>
   <div id="roomBrowser" class="overlay hidden"><section class="panel wide-panel" aria-labelledby="browserTitle">
-    <button id="btn-browser-menu" class="text-btn">← Main menu</button>
-    <p class="eyebrow" id="playerGreeting">WELCOME</p><h2 id="browserTitle">Find your race</h2>
-    <div class="section-title"><h3>Public rooms</h3><button id="btn-refresh" class="text-btn">Refresh</button></div>
-    <ul id="publicRooms" class="plain-list" aria-label="Public rooms"></ul>
-    <details><summary>Create a room</summary><form id="createForm">
-      <label for="roomName">Room name</label><input id="roomName" maxlength="32" placeholder="Our table's race" />
-      <label for="roomPrivacy">Room visibility</label><select id="roomPrivacy"><option value="public">Public — listed for everyone</option><option value="private">Private — code or invitation only</option></select>
-      <button class="btn primary" type="submit">Create Room</button></form></details>
-    <details><summary>Join with a room code</summary><form id="joinForm"><label for="roomCode">Room code</label>
-      <input id="roomCode" maxlength="10" autocomplete="off" autocapitalize="characters" placeholder="10-character code" required />
-      <button class="btn secondary" type="submit">Join Room</button></form></details>
-    <p class="help">1–6 humans · 3 laps · no weapons · no race time limit</p>
+    <button id="btn-browser-menu" class="text-btn" data-i18n="nav.backMain"></button>
+    <p class="eyebrow" id="playerGreeting" data-i18n="browser.welcome"></p><h2 id="browserTitle" data-i18n="browser.title"></h2>
+    <div class="section-title"><h3 data-i18n="browser.public"></h3><button id="btn-refresh" class="text-btn" data-i18n="browser.refresh"></button></div>
+    <ul id="publicRooms" class="plain-list" aria-label="" data-i18n-aria-label="browser.public"></ul>
+    <details><summary data-i18n="room.createSummary"></summary><form novalidate id="createForm">
+      <label for="roomName" data-i18n="room.name"></label><input id="roomName" maxlength="32" placeholder="" data-i18n-placeholder="room.namePlaceholder" dir="auto" />
+      <label for="roomPrivacy" data-i18n="room.visibility"></label><select id="roomPrivacy"><option value="public" data-i18n="room.publicOption"></option><option value="private" data-i18n="room.privateOption"></option></select>
+      <button class="btn primary" type="submit" data-i18n="room.create"></button></form></details>
+    <details><summary data-i18n="room.codeSummary"></summary><form novalidate id="joinForm"><label for="roomCode" data-i18n="room.code"></label>
+      <input id="roomCode" maxlength="10" autocomplete="off" autocapitalize="characters" placeholder="" data-i18n-placeholder="room.codePlaceholder" required dir="ltr" />
+      <button class="btn secondary" type="submit" data-i18n="room.join"></button></form></details>
+    <p class="help" data-i18n="browser.rules"></p>
   </section></div>
   <div id="lobbyScreen" class="overlay hidden"><section class="panel" aria-labelledby="lobbyName">
-    <p class="eyebrow">PRE-RACE LOBBY</p><h2 id="lobbyName">Race room</h2><p id="lobbyInfo" class="help"></p>
-    <ul id="lobbyPlayers" class="plain-list" aria-label="Players in room"></ul>
-    <p id="lobbyHint" class="help"></p><button id="btn-room-start" class="btn primary">Start Race</button>
-    <details><summary>Invite a friend · <span id="lobbyCode"></span></summary><label for="inviteLink">Invitation link</label><input id="inviteLink" readonly /><button id="btn-invite" class="btn secondary">Copy invitation link</button></details>
-    <button id="btn-lobby-leave" class="btn secondary">Leave room</button>
-    <button id="btn-lobby-menu" class="text-btn">Main menu</button>
+    <p class="eyebrow" data-i18n="lobby.tag"></p><h2 id="lobbyName" data-i18n="lobby.title"></h2><p id="lobbyInfo" class="help"></p>
+    <ul id="lobbyPlayers" class="plain-list" aria-label="" data-i18n-aria-label="lobby.players"></ul>
+    <p id="lobbyHint" class="help"></p><button id="btn-room-start" class="btn primary" data-i18n="lobby.start"></button>
+    <details><summary><span data-i18n="lobby.invite"></span><span id="lobbyCode"></span></summary><label for="inviteLink" data-i18n="lobby.inviteLink"></label><input id="inviteLink" readonly dir="ltr" /><button id="btn-invite" class="btn secondary" data-i18n="lobby.copy"></button></details>
+    <button id="btn-lobby-leave" class="btn secondary" data-i18n="lobby.leave"></button>
+    <button id="btn-lobby-menu" class="text-btn" data-i18n="nav.main"></button>
   </section></div>
   <div id="pauseMenu" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
-    <section class="panel"><p class="eyebrow">TAKE A BREATHER</p><h2 id="pauseTitle">Race paused</h2><p id="pauseDescription" class="subtitle">Your local race is waiting for you.</p><button id="btn-resume" class="btn primary">Resume race</button><button id="btn-leave" class="btn secondary">Leave race</button></section>
+    <section class="panel"><p class="eyebrow" data-i18n="pause.tag"></p><h2 id="pauseTitle" data-i18n="pause.title"></h2><p id="pauseDescription" class="subtitle" data-i18n="pause.description"></p><button id="btn-resume" class="btn primary" data-i18n="pause.resume"></button><button id="btn-leave" class="btn secondary" data-i18n="pause.leave"></button></section>
   </div>
   <div id="raceOver" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="resultsTitle">
-    <section class="panel results-panel"><p class="eyebrow">CHEQUERED FLAG</p><h2 id="resultsTitle">Race results</h2><p id="resultsSummary" class="help"></p><ol id="results" aria-label="Finishing positions"></ol><p id="resultsHint" class="help"></p><button id="btn-restart" class="btn primary">Race again</button><button id="btn-menu" class="btn secondary">Main menu</button></section>
+    <section class="panel results-panel"><p class="eyebrow" data-i18n="results.tag"></p><h2 id="resultsTitle" data-i18n="results.title"></h2><p id="resultsSummary" class="help"></p><ol id="results" aria-label="" data-i18n-aria-label="results.positions"></ol><p id="resultsHint" class="help"></p><button id="btn-restart" class="btn primary" data-i18n="results.playAgain"></button><button id="btn-menu" class="btn secondary" data-i18n="nav.main"></button></section>
   </div>
   <script type="module" src="js/main.js"></script>
 </body>

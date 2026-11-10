@@ -2,6 +2,8 @@
 
 A locally playable, mobile-first racing MVP adapted from [GenerateRacer](https://github.com/commjoen/generatedracer) by Jeroen Willemsen. Vanilla JavaScript + Canvas 2D, with one authoritative Node/WebSocket server. No database, registration or app installation.
 
+**Arabic is the default. English is fully supported.** Use **العربية | English** at the top of any screen, including during a race. The choice is saved in this browser; switching updates text/direction immediately without reloading, reconnecting or changing the race. Track/steering directions stay the same. Nicknames, room codes and links remain readable. See [localization guide](docs/LOCALIZATION.md).
+
 Public testing: [open the temporary HTTPS game](https://brian-desired-theology-bath.trycloudflare.com/). This free Cloudflare Tunnel forwards to the production-mode Node server on the development computer. The computer must stay awake and both processes must remain running; the URL is not permanent cloud hosting. A dedicated Render free-service configuration is ready in `render.yaml`, pending hosting authorization. See [deployment status](docs/PUBLIC_DEPLOYMENT.md).
 
 ## Play
@@ -50,6 +52,7 @@ Brake overrides gas. Online blur/backgrounding releases controls and never pause
 ```sh
 npm test
 npm run test:browser
+npm run test:i18n
 npm run build
 node tools/verify-build.mjs
 ```

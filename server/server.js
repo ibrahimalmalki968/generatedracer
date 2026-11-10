@@ -1,3 +1,4 @@
+import { fault, MessageError } from '../shared/translations.js';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { pathToFileURL } from 'node:url';
@@ -28,7 +29,7 @@ export async function createGameServer({ host = '127.0.0.1', port = 0, countdown
   });
   wss.on('connection', ws => {
     ws.alive = true; ws.tokens = 120; ws.tokenAt = performance.now(); ws.commands = 12; ws.commandAt = performance.now();
-    const timeout = setTimeout(() => { if (!ws.session) ws.close(1008, 'Enter a nickname first'); }, 5000);
+    const timeout = setTimeout(() => { if (!ws.session) ws.close(1008, 'error.nicknameFirst'); }, 5000);
     ws.on('pong', () => { ws.alive = true; });
     ws.on('error', () => {});
     ws.on('close', () => { clearTimeout(timeout); game.disconnect(ws); });
@@ -37,18 +38,18 @@ export async function createGameServer({ host = '127.0.0.1', port = 0, countdown
       try {
         const now = performance.now();
         ws.tokens = Math.min(120, ws.tokens + (now - ws.tokenAt) * 0.075); ws.tokenAt = now;
-        if (--ws.tokens < 0) { ws.close(1008, 'Too many messages'); return; }
-        if (binary) throw new Error('Use JSON messages.');
+        if (--ws.tokens < 0) { ws.close(1008, 'error.tooManyMessages'); return; }
+        if (binary) throw fault('error.jsonOnly');
         const m = JSON.parse(raw.toString());
-        if (!m || typeof m !== 'object' || Array.isArray(m) || typeof m.type !== 'string') throw new Error('Invalid message.');
+        if (!m || typeof m !== 'object' || Array.isArray(m) || typeof m.type !== 'string') throw fault('error.message');
         requestId = typeof m.requestId === 'string' ? m.requestId.slice(0, 64) : undefined;
         if (m.type !== 'input') {
           ws.commands = Math.min(12, ws.commands + (now - ws.commandAt) * 0.004); ws.commandAt = now;
-          if (--ws.commands < 0) throw new Error('Slow down and try again.');
+          if (--ws.commands < 0) throw fault('error.slowDown');
         }
         if (m.type === 'hello' && !ws.session) { game.hello(ws, m); clearTimeout(timeout); return; }
         const s = ws.session;
-        if (!s) throw new Error('Enter a nickname first.');
+        if (!s) throw fault('error.nicknameFirst');
         if (m.type === 'create') game.create(s, m);
         else if (m.type === 'solo') game.solo(s, m.raceId);
         else if (m.type === 'join') game.join(s, m.code);
@@ -58,13 +59,16 @@ export async function createGameServer({ host = '127.0.0.1', port = 0, countdown
         else if (m.type === 'cancel') game.cancel(s, m.lobbyId);
         else if (m.type === 'input') game.input(s, m);
         else if (m.type === 'leave') {
-          if (m.roomCode !== s.roomId) throw new Error('Room changed.');
+          if (m.roomCode !== s.roomId) throw fault('error.roomChanged');
           game.leave(s);
         }
         else if (m.type === 'back') game.back(s, m.raceId);
-        else throw new Error('Unknown action.');
+        else throw fault('error.unknownAction');
         if (m.type !== 'input') game.send(ws, { type: 'ack', requestId });
-      } catch (e) { game.send(ws, { type: 'error', requestId, message: e instanceof SyntaxError ? 'Invalid JSON.' : e.message }); }
+      } catch (e) {
+        const error = e instanceof SyntaxError ? fault('error.json') : e instanceof MessageError ? e : fault('error.unknown');
+        game.send(ws, { type: 'error', requestId, code: error.code, params: error.params, message: error.message });
+      }
     });
   });
   let accumulator = 0, previous = performance.now();
