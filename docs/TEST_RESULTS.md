@@ -1,5 +1,29 @@
 # Verification results — 10 November 2026
 
+## 11 November — complete Midnight Circuit UI/UX transformation
+
+| Actual suite | Result | Evidence directory (workspace outputs) |
+| --- | --- | --- |
+| Automated Node tests | 73 passed; 0 failed/skipped | `ui-ux-final-all-tests.tap` |
+| Initial full English browser regression | Chrome 152, Edge 152; 0 app errors | `ui-ux-regression-chrome`, `ui-ux-regression-edge` |
+| Final public redesigned UI journey | Chrome 134, Edge 134; 0 app errors/missing keys | `ui-ux-public-rematch-chrome`, `ui-ux-public-rematch-edge` |
+| Final full public bilingual journey | Chrome 128, Edge 128; 0 app errors/missing keys | `ui-ux-public-bilingual-chrome-release`, `ui-ux-public-bilingual-edge-release` |
+| Final full public English regression | Chrome 150; 0 app errors | `ui-ux-public-english-chrome-release` |
+| Final public WSS socket suite | 34 passed; 0 errors; full 2/3/4/5/6-human races | `ui-ux-public-sockets-release/sockets.json` |
+| Production package and audit | Build/runtime HTTP/WSS/artwork/license smoke passed; 0 runtime vulnerabilities | Build verifier / npm audit |
+
+The local-owned-server English suite has two extra internal socket/room cleanup assertions that cannot run against an external origin; the 150 public count is not a skipped/failing test. Counts overlap between suites; do not add them as unique player sessions. Chrome version 146.0.7680.80, Edge 157.0.4341.46; installed browsers driven through existing Playwright because the Browser plugin/skill was unavailable.
+
+UI coverage: real welcome → mode → creation/public/private/invitation lobby → acknowledged Ready/countdown → physical three-lap human race → localized standings → same-room reset → socket recovery; copy/native-share cancellation/denial/manual fallback, input validation, controlled focus/Tab/Escape, reduced motion, separate results/action geometry and clear controls. Both-language screenshots cover welcome, modes, browser, create, lobby, countdown, HUD, pause, results and errors. Narrow 320×568, standard 390×844 and 844×390 landscape check every major screen; mode/HUD regressions additionally check 360×640, 412×915 and desktop 1280×800 where relevant. Target/geometry checks include no horizontal overflow, no clipped labels and ≥44px controls. Contrast pairs are automated; this is not full accessibility certification.
+
+Gameplay regression includes five-AI solo and direct replay, 2–6 humans without AI fill, fixed laps, lap-based Turbo, identity/room isolation, Ready/locking, disconnect/DNF and repeated rematches. The local native socket suite physically drives five simultaneous 2–6-human races (20 racers). A bounded 180-input burst test preserves own-car control and single Turbo use; malformed/flood/origin/unauthorized controls remain tested. Actual HTTP/WSS preview assets match the checkout and MIT LICENSE remains byte-identical.
+
+Intermediate failures and refinements are retained rather than counted as passes: generic geometry missed sticky results/action overlap, fixed with separate regions and a new assertion; a mock share property was non-writable, fixed in the fixture; validation/Ready tests needed to wait for the relevant client's state; held-key tests now acquire page focus after viewport/other-page checks because blur intentionally releases controls. Earlier public runs also recorded 1008 rate-limit closes with a regular measured ~60Hz input stream. Burst tolerance is now bounded at 240 with 75/sec sustained and independent command limits; the exact proxy delivery cause is not proved. Final fresh bilingual/public regression runs passed afterward. No arbitrary transport-stall or high-concurrency guarantee is claimed.
+
+Physical iPhone/Android/Safari, actual native mobile share sheet, real keyboard/notches/home indicators, screen readers and thermal/battery/low-end hardware remain unverified. Representative actual screenshots are in `docs/ui-ux/`; see UI_UX_IMPLEMENTATION_REPORT.md for the visual refinement ledger and intentional deviations from generated references.
+
+The following sections retain historical verification counts.
+
 ## 11 November — Arabic/English localization
 
 Final automated verification: **67 tests passed, 0 failed/skipped**, including dictionary/key/placeholder parity, six Arabic plural categories, safe fallback/corrupted preference handling, bidi name/number isolation, HTML bindings, structured server errors and generated-name metadata. All previous input/physics/2–6-human synchronization/rooms/results/security tests still pass. Runtime dependency audit reports zero vulnerabilities; final production folder build/runtime smoke passes. No dependencies were added.

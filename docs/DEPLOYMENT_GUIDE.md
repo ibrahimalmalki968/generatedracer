@@ -49,7 +49,7 @@ npm run build
 node tools/verify-build.mjs
 ```
 
-There is no frontend compilation requirement. The build validates entry-point syntax and copies `index.html`, CSS, JS, shared/server modules, package lock and the unchanged MIT license to `dist/`. The build only replaces a generated directory bearing its own marker; it refuses an unrelated unmarked `dist/`.
+There is no frontend compilation requirement. The build validates entry-point syntax and copies `index.html`, CSS, the whitelisted menu artwork, JS, shared/server modules, package lock and the unchanged MIT license to `dist/`. The build only replaces a generated directory bearing its own marker; it refuses an unrelated unmarked `dist/`.
 
 To run the standalone folder:
 
