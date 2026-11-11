@@ -28,7 +28,10 @@ export async function createGameServer({ host = '127.0.0.1', port = 0, countdown
     } catch { socket.destroy(); }
   });
   wss.on('connection', ws => {
-    ws.alive = true; ws.tokens = 120; ws.tokenAt = performance.now(); ws.commands = 12; ws.commandAt = performance.now();
+    // A proxy may deliver a few seconds of the legitimate 60 Hz stream together.
+    // Bound that burst separately from the unchanged 75/sec sustained budget;
+    // expensive lobby commands still have their stricter 12-burst / 4-per-second limit.
+    ws.alive = true; ws.tokens = 240; ws.tokenAt = performance.now(); ws.commands = 12; ws.commandAt = performance.now();
     const timeout = setTimeout(() => { if (!ws.session) ws.close(1008, 'error.nicknameFirst'); }, 5000);
     ws.on('pong', () => { ws.alive = true; });
     ws.on('error', () => {});
@@ -37,7 +40,7 @@ export async function createGameServer({ host = '127.0.0.1', port = 0, countdown
       let requestId;
       try {
         const now = performance.now();
-        ws.tokens = Math.min(120, ws.tokens + (now - ws.tokenAt) * 0.075); ws.tokenAt = now;
+        ws.tokens = Math.min(240, ws.tokens + (now - ws.tokenAt) * 0.075); ws.tokenAt = now;
         if (--ws.tokens < 0) { ws.close(1008, 'error.tooManyMessages'); return; }
         if (binary) throw fault('error.jsonOnly');
         const m = JSON.parse(raw.toString());

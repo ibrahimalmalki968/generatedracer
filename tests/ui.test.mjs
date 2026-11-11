@@ -3,6 +3,18 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { shareInvitation } from '../js/ui.js';
 import { createGameServer } from '../server/server.js';
+import { client } from './helpers/socket-client.mjs';
+
+test('bounded proxy-delayed input burst retains own-car control and preserves Turbo authority', async t => {
+  const s = await createGameServer({ countdownMs: 0, autoTick: false }); t.after(() => s.close());
+  const c = await client(s.port, 'Delayed mobile'); await c.request({ type: 'solo' }); s.game.step();
+  const room = s.game.rooms.get(c.room().code);
+  for (let seq = 1; seq <= 180; seq++) c.send({ type: 'input', raceId: room.raceId, seq, boost: 1, gas: 1, brake: 0, steer: 0 });
+  assert.equal((await c.request({ type: 'list' })).type, 'ack');
+  assert.equal(c.ws.readyState, 1); assert.equal(room.members.get(c.welcome.playerId).seq, 180);
+  s.game.step(); assert.equal(room.engine.cars[0].turboUses, 1);
+  assert.equal(room.engine.cars[0].lap, 0);
+});
 
 test('native invitation sharing uses the real URL and never copies after success', async () => {
   let received; let copies = 0;

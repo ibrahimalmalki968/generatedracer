@@ -127,8 +127,13 @@ try {
   const directions = await host.evaluate(() => ['btn-left', 'btn-right', 'btn-brake', 'btn-gas'].map(id => document.getElementById(id).getBoundingClientRect().x));
   check(directions[0] < directions[1] && directions[2] < directions[3], 'Arabic keeps physical left/right steering and brake/gas order');
   await host.evaluate(() => { window.originalSocket = qaNet.socket; window.originalRace = qaNet.room.raceId; window.originalPlayer = qaNet.playerId; window.beforeCommands = qaCommands.length; window.pageOrigin = performance.timeOrigin; });
+  // Viewport/other-page checks can leave this page unfocused; the game correctly
+  // releases held keys on blur. Acquire actual focus before testing held keys.
+  await host.bringToFront();
+  await host.locator('#gameCanvas').click({ position: { x: 150, y: 280 } });
+  await host.waitForFunction(() => document.hasFocus());
   await host.keyboard.down('ArrowUp'); await host.keyboard.down('ArrowLeft');
-  await host.waitForFunction(() => qaNet.latest.cars.find(c => c.participantId === qaNet.playerId).speed > 20); await switchTo(host, 'en'); await switchTo(host, 'ar');
+  await host.waitForFunction(() => qaNet.latest?.cars.find(c => c.participantId === qaNet.playerId)?.speed > 20); await switchTo(host, 'en'); await switchTo(host, 'ar');
   check(await host.evaluate(() => qaNet.socket === originalSocket && qaNet.room.raceId === originalRace && qaNet.playerId === originalPlayer && qaCommands.length === beforeCommands && performance.timeOrigin === pageOrigin), 'Live language switching sends no commands, reload or reconnection and retains car ownership');
   check(await host.evaluate(() => { const c = qaNet.latest.cars.find(c => c.participantId === qaNet.playerId); return c.speed > 20 && c.angle < 0; }), 'Held acceleration and left steering continue across language changes');
   await host.keyboard.up('ArrowLeft'); await host.keyboard.up('ArrowUp'); await host.locator('#hud-turbo').click();
