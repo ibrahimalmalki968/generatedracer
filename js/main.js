@@ -11,7 +11,10 @@ import { Car } from './car.js';
 import { t, displayNameOf, ordinal, initLanguage, languageEvents, getLanguage } from './i18n.js';
 import { message } from '../shared/translations.js';
 
+import { Presentation, setButtonLabel } from './ui.js';
+
 initLanguage();
+const presentation = new Presentation();
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -58,8 +61,13 @@ window.visualViewport?.addEventListener('resize', resize);
 
 function show(id, visible) { document.getElementById(id).classList.toggle('hidden', !visible); }
 function showCountdown(value) {
-  document.getElementById('countdownNum').textContent = String(value);
-  document.getElementById('countdown').setAttribute('aria-label', t('race.countdownLabel', { count: value }));
+  const number = document.getElementById('countdownNum');
+  if (number.textContent !== String(value)) {
+    number.textContent = String(value); const box = number.closest('.countdown-content'); box.classList.remove('tick'); void box.offsetWidth; box.classList.add('tick');
+    document.querySelectorAll('.start-lights i').forEach((light, i) => light.classList.toggle('dim', i >= 4 - value));
+  }
+  const box = document.getElementById('countdown'), label = t('race.countdownLabel', { count: value });
+  if (box.getAttribute('aria-label') !== label) box.setAttribute('aria-label', label);
 }
 function waitingMessage(finished) {
   return t('race.waiting', { names: finished.length ? displayNameOf(finished[0]) : '',
@@ -85,12 +93,13 @@ function syncScreens() {
   show('countdown', state === 'countdown');
   show('btn-cancel-countdown', online && state === 'countdown');
   show('raceStatus', playing && session?.cars.some(c => c.finished));
+  presentation.update(state);
 }
 
 function start(humans) {
   online = false;
-  document.getElementById('btn-pause').textContent = t('race.pause');
-  document.getElementById('btn-restart').textContent = t('results.playAgain');
+  setButtonLabel(document.getElementById('btn-pause'), t('race.pause'));
+  setButtonLabel(document.getElementById('btn-restart'), t('results.playAgain'));
   document.getElementById('btn-menu').textContent = t('nav.main');
   setInputs(false);
   session = new LocalSession(humans);
@@ -146,11 +155,17 @@ function renderResults() {
   results.replaceChildren();
   const standings = session.race.getResults();
   const winner = standings.find(r => r.status === 'finished');
+  document.getElementById('winnerName').textContent = winner ? displayNameOf(winner) : '';
   document.getElementById('resultsSummary').textContent = winner ? t('results.winner', { name: displayNameOf(winner) }) : t('results.noWinner');
   document.getElementById('resultsHint').textContent = t(online && !network.room?.solo ? 'results.lobbyHint' : 'results.replayHint');
+  const ownId = online ? network.latest?.cars.find(c => c.participantId === network.playerId)?.id : 0;
+  const own = standings.find(r => r.id === ownId);
+  document.getElementById('personalResult').textContent = own ? t(own.status === 'disconnected' ? 'ui.yourDnf' : 'ui.yourFinish', { position: ordinal(own.position) }) : '';
   for (const r of standings) {
     const row = document.createElement('li');
     row.className = `result-row${r.isHuman ? ' result-human' : ''}`;
+    row.dataset.dnf = String(r.status === 'disconnected');
+    row.classList.toggle('result-self', r.id === ownId);
     for (const [className, text] of [['pos', r.status === 'disconnected' ? t('results.dnf') : `${r.position}.`], ['name', displayNameOf(r)],
       ['info', r.finished ? t('results.time', { time: formatTime(r.finishTime), best: formatTime(r.bestLap) }) : r.status === 'disconnected' ? t('results.disconnected') : t('results.unfinished', { lap: Math.min(r.lap + 1, 3) })]]) {
       const span = document.createElement('span'); span.className = className; span.textContent = text; if (className === 'name') span.dir = 'auto'; row.append(span);
@@ -229,7 +244,10 @@ function loop(ts) {
     while (accumulator >= SIMULATION_STEP) { network.predict(input.get()); accumulator -= SIMULATION_STEP; }
     const finished = network.latest?.cars.filter(c => c.finished) || [];
     show('raceStatus', finished.length > 0);
-    if (finished.length) document.getElementById('raceStatus').textContent = waitingMessage(finished);
+    if (finished.length) {
+      const label = waitingMessage(finished), status = document.getElementById('raceStatus');
+      if (status.textContent !== label) status.textContent = label;
+    }
   } else if (state === 'countdown') {
     countdown -= dt;
     showCountdown(Math.max(1, Math.ceil(countdown)));
@@ -248,7 +266,10 @@ function loop(ts) {
     if (session.humans === 2) hud2.update(session.cars[1], session.race);
     const waiting = session.cars.some(c => c.finished);
     show('raceStatus', state === 'racing' && waiting);
-    if (waiting) document.getElementById('raceStatus').textContent = t('race.localWaiting');
+    if (waiting) {
+      const label = t('race.localWaiting'), status = document.getElementById('raceStatus');
+      if (status.textContent !== label) status.textContent = label;
+    }
   }
   if (state === 'racing' || state === 'countdown' || renderDirty) {
     render(dt);
@@ -322,9 +343,9 @@ window.addEventListener('keydown', e => { if (e.code === 'Escape') { if (state =
 document.getElementById('btn-cancel-countdown').addEventListener('click', () => lobby.action('cancel'));
 function refreshCopy() {
   document.getElementById('menu-version').textContent = t('footer.version', { version: APP_VERSION });
-  document.getElementById('btn-pause').textContent = t(online ? 'race.onlineMenu' : 'race.pause');
+  setButtonLabel(document.getElementById('btn-pause'), t(online ? 'race.onlineMenu' : 'race.pause'));
   document.getElementById('btn-pause').setAttribute('aria-label', t(online ? 'race.onlineMenu' : 'race.pauseLabel'));
-  document.getElementById('btn-restart').textContent = t(online && !network.room?.solo ? 'results.returnLobby' : 'results.playAgain');
+  setButtonLabel(document.getElementById('btn-restart'), t(online && !network.room?.solo ? 'results.returnLobby' : 'results.playAgain'));
   document.getElementById('btn-menu').textContent = t('nav.main');
   document.getElementById('btn-leave').textContent = t(online && network.room?.solo ? 'nav.main' : 'pause.leave');
   document.getElementById('pauseTitle').textContent = t(online ? 'pause.onlineTitle' : 'pause.title');

@@ -37,9 +37,9 @@ test('all HTML bindings and literal UI/message keys resolve; forms avoid untrans
   for (const match of html.matchAll(/data-i18n(?:-(?:aria-label|placeholder|title|content))?="([^"]+)"/g)) assert.ok(Object.hasOwn(translations.ar, match[1]), match[1]);
   assert.match(html, /<html lang="ar" dir="rtl">/);
   assert.equal((html.match(/<form novalidate /g) || []).length, 3);
-  for (const file of ['js/main.js', 'js/lobby.js', 'js/hud.js', 'js/network.js', 'server/game.js', 'server/server.js', 'shared/protocol.js']) {
+  for (const file of ['js/main.js', 'js/lobby.js', 'js/hud.js', 'js/network.js', 'js/ui.js', 'server/game.js', 'server/server.js', 'shared/protocol.js']) {
     const source = await readFile(new URL('../' + file, import.meta.url), 'utf8');
-    for (const m of source.matchAll(/['"]((?:error|connection|mode|room|lobby|hud|control|results|pause|race|nav|footer|browser|entry|notice)\.[A-Za-z0-9_.]+)['"]/g)) assert.ok(Object.hasOwn(translations.ar, m[1]), file + ': ' + m[1]);
+    for (const m of source.matchAll(/['"]((?:ui|error|connection|mode|room|lobby|hud|control|results|pause|race|nav|footer|browser|entry|notice)\.[A-Za-z0-9_.]+)['"]/g)) assert.ok(Object.hasOwn(translations.ar, m[1]), file + ': ' + m[1]);
   }
 });
 test('server errors carry stable codes/values while English protocol diagnostics remain compatible', async t => {

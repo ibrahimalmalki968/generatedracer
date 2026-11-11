@@ -21,7 +21,7 @@ for (const file of files) {
   const result = spawnSync(process.execPath, ['--check', resolve(root, file)], { encoding: 'utf8' });
   if (result.status !== 0) throw new Error(`Syntax check failed: ${file}\n${result.stderr}`);
 }
-for (const file of ['index.html', 'game.css', 'LICENSE', 'package.json', 'package-lock.json', 'js', 'shared', 'server']) {
+for (const file of ['index.html', 'game.css', 'assets', 'LICENSE', 'package.json', 'package-lock.json', 'js', 'shared', 'server']) {
   await cp(resolve(root, file), resolve(target, file), { recursive: true });
 }
 const packageJson = JSON.parse(await readFile(resolve(target, 'package.json')));

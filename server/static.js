@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve, sep, extname } from 'node:path';
 const root = fileURLToPath(new URL('../', import.meta.url));
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp' };
 export async function staticRequest(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
@@ -14,7 +14,7 @@ export async function staticRequest(req, res) {
     const path = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
     if (path === '/health') { res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"ok":true}'); return; }
     const name = path === '/' ? 'index.html' : path.slice(1);
-    if (name.includes('\\') || name.split('/').some(p => p.startsWith('.')) || !/^(index\.html|game\.css|LICENSE|(?:js|shared)\/.+\.js)$/.test(name)) {
+    if (name.includes('\\') || name.split('/').some(p => p.startsWith('.')) || !/^(index\.html|game\.css|assets\/menu-kart\.webp|LICENSE|(?:js|shared)\/.+\.js)$/.test(name)) {
       res.writeHead(404).end(); return;
     }
     const file = resolve(root, name);

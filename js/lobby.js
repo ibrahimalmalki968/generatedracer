@@ -1,3 +1,4 @@
+import { icon, setButtonLabel, shareInvitation } from './ui.js';
 import { displayName } from '../shared/protocol.js';
 import { message } from '../shared/translations.js';
 import { t, textMessage, displayNameOf, languageEvents } from './i18n.js';
@@ -43,6 +44,22 @@ export class LobbyUI extends EventTarget {
       if (room.players.length === 1) this.action('start');
       else this.action('ready', { ready: !room.players.find(p => p.id === network.playerId)?.ready });
     });
+    el('btn-message-dismiss').addEventListener('click', () => this.message(''));
+    el('btn-reconnect').addEventListener('click', () => {
+      this.message(''); network.destroy(); network.socket = null; network.ready = false; network.connect(network.nickname || el('nickname').value);
+    });
+    el('btn-share').addEventListener('click', async () => {
+      if (this.sharing) return;
+      this.sharing = true; el('btn-share').disabled = true;
+      try {
+        const outcome = await shareInvitation(el('inviteLink').value, 'GenerateRacer');
+        if (outcome === 'shared') this.message(message('ui.shared'));
+        else if (outcome === 'copied') this.message(message('notice.copied'));
+        else if (outcome === 'manual') {
+          el('inviteLink').closest('details').open = true; el('inviteLink').focus(); el('inviteLink').select(); this.message(message('notice.copyManually'));
+        }
+      } finally { this.sharing = false; el('btn-share').disabled = false; }
+    });
     el('btn-invite').addEventListener('click', async () => {
       const input = el('inviteLink'); input.select();
       try { await navigator.clipboard.writeText(input.value); this.message(message('notice.copied')); }
@@ -64,7 +81,20 @@ export class LobbyUI extends EventTarget {
     }
   }
 
-  message(value) { this.lastMessage = value; this.error.textContent = textMessage(value); this.error.classList.toggle('hidden', !value); }
+  message(value) {
+    this.lastMessage = value; this.error.textContent = textMessage(value); this.error.classList.toggle('hidden', !value);
+    const key = value?.key || value?.code || value;
+    this.error.dataset.kind = typeof key === 'string' && (key.startsWith('error.') || key.startsWith('connection.')) ? 'error' : 'notice';
+    document.getElementById('messageActions').classList.toggle('hidden', !value);
+    this.recoveryButton();
+    for (const id of ['nickname', 'roomCode', 'roomName']) document.getElementById(id).removeAttribute('aria-invalid');
+    const field = key === 'error.roomCode' || key === 'error.roomMissing' ? 'roomCode' : key === 'error.nameLength' ? (document.getElementById('mainMenu').classList.contains('hidden') ? 'roomName' : 'nickname') : null;
+    if (field) { document.getElementById(field).setAttribute('aria-invalid', 'true'); document.getElementById(field).setAttribute('aria-describedby', 'appMessage'); }
+  }
+  recoveryButton() {
+    const key = this.lastMessage?.key || this.lastMessage?.code || '';
+    document.getElementById('btn-reconnect').classList.toggle('hidden', this.network.ready || !this.network.nickname || !(key.startsWith('connection.') || ['error.connectionLost', 'error.notConnected', 'error.timeout', 'error.sessionElsewhere'].includes(key)));
+  }
   greeting() {
     if (!this.network.nickname) return;
     document.getElementById('playerGreeting').textContent = t('browser.greeting', { name: this.network.nickname });
@@ -97,6 +127,12 @@ export class LobbyUI extends EventTarget {
     await this.action('leave');
   }
   busyButtons() {
+    this.recoveryButton();
+    const connecting = Boolean(!this.network.ready && this.network.socket && this.network.socket.readyState < 2);
+    document.querySelector('#nicknameForm button').disabled = connecting;
+    document.getElementById('nicknameForm').setAttribute('aria-busy', String(connecting));
+    if (this.network.socket) this.status.classList.remove('hidden');
+    document.getElementById('roomBrowser').setAttribute('aria-busy', String(this.pending));
     for (const id of ['btn-solo', 'btn-multiplayer', 'btn-change-name', 'btn-browser-menu', 'btn-lobby-menu', 'btn-refresh', 'btn-lobby-leave']) {
       document.getElementById(id).disabled = this.pending || !this.network.ready;
     }
@@ -127,14 +163,18 @@ export class LobbyUI extends EventTarget {
     this.lastRooms = rooms;
     const list = document.getElementById('publicRooms'); list.replaceChildren();
     if (!rooms.length) {
-      const empty = document.createElement('p'); empty.className = 'help'; empty.textContent = t('browser.empty'); list.append(empty);
+      const empty = document.createElement('li'); empty.className = 'empty-state';
+      const symbol = document.createElement('span'); symbol.innerHTML = icon('flag'); symbol.setAttribute('aria-hidden', 'true');
+      const copy = document.createElement('p'); copy.textContent = t('browser.empty'); empty.append(symbol, copy); list.append(empty);
     }
     for (const r of rooms) {
-      const row = document.createElement('li'); row.className = 'room-row'; row.dataset.roomCode = r.code;
+      const row = document.createElement('li'); row.className = 'room-row'; row.dataset.roomCode = r.code; row.dataset.available = String(r.available);
       const info = document.createElement('div'), name = document.createElement('strong'), detail = document.createElement('small');
       const roomName = displayNameOf(r); name.textContent = roomName; name.dir = 'auto';
       detail.textContent = t('room.detail', { count: r.count, capacity: r.capacity, players: t('players.count', { count: r.count }), availability: t(r.phase === 'lobby' ? r.count === 6 ? 'room.full' : 'room.open' : 'room.racing') });
-      info.append(name, detail);
+      const slots = document.createElement('div'); slots.className = 'room-slots'; slots.setAttribute('aria-hidden', 'true');
+      for (let i = 0; i < r.capacity; i++) { const slot = document.createElement('i'); slot.classList.toggle('occupied', i < r.count); slots.append(slot); }
+      info.append(name, detail, slots);
       const join = document.createElement('button'); join.textContent = t('room.joinShort'); join.className = 'btn small secondary';
       join.dataset.available = String(r.available); join.disabled = this.pending || !this.network.ready || !r.available; join.setAttribute('aria-label', t('room.joinNamed', { name: roomName }));
       join.addEventListener('click', () => this.action('join', { code: r.code })); row.append(info, join); list.append(row);
@@ -149,17 +189,28 @@ export class LobbyUI extends EventTarget {
     el('inviteLink').value = link.href;
     const list = el('lobbyPlayers'); list.replaceChildren();
     room.players.forEach((p, i) => {
-      const item = document.createElement('li'); item.className = 'player-row';
-      const name = document.createElement('span'), nickname = document.createElement('bdi'); nickname.dir = 'auto'; nickname.textContent = p.nickname;
-      const number = document.createElement('bdi'); number.dir = 'ltr'; number.textContent = (i + 1) + '. ';
-      name.append(number, nickname, p.id === this.network.playerId ? t('lobby.you') : '');
+      const item = document.createElement('li'); item.className = 'player-row'; item.classList.toggle('is-ready', p.ready);
+      const name = document.createElement('span'); name.className = 'player-identity';
+      const avatar = document.createElement('span'); avatar.className = 'avatar'; avatar.textContent = Array.from(p.nickname)[0]; avatar.setAttribute('aria-hidden', 'true');
+      const text = document.createElement('span'); text.className = 'player-name';
+      const nickname = document.createElement('bdi'); nickname.dir = 'auto'; nickname.textContent = p.nickname;
+      text.append(nickname, p.id === this.network.playerId ? t('lobby.you') : ''); name.append(avatar, text);
       const ready = document.createElement('strong'); ready.textContent = t(p.ready ? 'lobby.readyStatus' : 'lobby.waiting'); ready.className = p.ready ? 'ready-label' : '';
       item.append(name, ready); list.append(item);
     });
     const solo = room.players.length === 1, me = room.players.find(p => p.id === this.network.playerId);
-    el('btn-room-start').textContent = t(solo ? 'lobby.start' : me?.ready ? 'lobby.notReady' : 'lobby.ready');
+    setButtonLabel(el('btn-room-start'), t(solo ? 'lobby.start' : me?.ready ? 'ui.cancelReady' : 'lobby.ready'));
+    if (solo) el('btn-room-start').removeAttribute('aria-pressed'); else el('btn-room-start').setAttribute('aria-pressed', String(Boolean(me?.ready)));
+    const readyCount = room.players.filter(p => p.ready).length;
+    el('readyProgress').textContent = t(solo ? 'lobby.start' : 'ui.readyProgress');
+    el('readyFraction').textContent = solo ? '1 / 6' : `${readyCount} / ${room.players.length}`;
+    const meter = el('readyMeter'); meter.setAttribute('aria-label', t('ui.readyCount', { ready: readyCount, count: room.players.length }));
+    meter.setAttribute('aria-valuemin', '0'); meter.setAttribute('aria-valuemax', String(room.players.length)); meter.setAttribute('aria-valuenow', String(readyCount));
+    meter.style.setProperty('--ready-progress', `${readyCount / room.players.length * 100}%`);
+    document.querySelector('.readiness').classList.toggle('hidden', solo);
     el('btn-room-start').disabled = !['lobby', 'countdown'].includes(room.phase) || (solo && room.phase === 'countdown');
-    el('lobbyHint').textContent = t(room.phase === 'countdown' ? 'lobby.countdownHint' : solo ? 'lobby.soloHint' : 'lobby.multiHint');
+    const waiting = room.players.find(p => !p.ready);
+    el('lobbyHint').textContent = t(room.phase === 'countdown' ? 'lobby.countdownHint' : solo ? 'lobby.soloHint' : waiting ? 'ui.waitingFor' : 'ui.everyoneReady', { name: waiting?.nickname });
     this.busyButtons();
   }
 }

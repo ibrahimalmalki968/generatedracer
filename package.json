@@ -9,6 +9,7 @@
     "test": "node --test",
     "test:browser": "node tools/browser-check.mjs",
     "test:i18n": "node tools/localization-check.mjs",
+    "test:ui": "node tools/ui-ux-check.mjs",
     "build": "node tools/build.mjs"
   },
   "engines": {
