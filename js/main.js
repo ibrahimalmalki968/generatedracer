@@ -148,7 +148,7 @@ function finish() {
   setInputs(false);
   renderResults();
   syncScreens();
-  document.getElementById('btn-restart').focus();
+  document.getElementById('resultsTitle').focus({ preventScroll: true });
 }
 function renderResults() {
   const results = document.getElementById('results');

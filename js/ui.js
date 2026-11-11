@@ -40,7 +40,7 @@ export class Presentation {
       const modal = document.querySelector('.overlay[aria-modal="true"]:not(.hidden)');
       if (!modal || e.key !== 'Tab') return;
       // Keep live language selection available even while a game dialog is open.
-      const elements = [...document.querySelectorAll('#languageSwitcher button, #messageActions button:not(.hidden)'), ...modal.querySelectorAll('button:not(:disabled), a, input')].filter(el => el.getClientRects().length);
+      const elements = [...document.querySelectorAll('#languageSwitcher button, #messageActions button:not(.hidden)'), ...modal.querySelectorAll('button:not(:disabled), a, input, .standings-scroll')].filter(el => el.getClientRects().length);
       const i = elements.indexOf(document.activeElement);
       if (i === -1 || (!e.shiftKey && i === elements.length - 1) || (e.shiftKey && i === 0)) {
         e.preventDefault(); elements[e.shiftKey ? elements.length - 1 : 0]?.focus();
@@ -58,7 +58,7 @@ export class Presentation {
     if (panel) {
       panel.scrollTop = 0;
       // Do not pop the mobile keyboard on screen transitions.
-      const focus = screen === 'paused' ? panel.querySelector('#btn-resume') : screen === 'finished' ? panel.querySelector('#btn-restart') : panel.querySelector('h1, h2');
+      const focus = screen === 'paused' ? panel.querySelector('#btn-resume') : screen === 'finished' ? panel.querySelector('#resultsTitle') : panel.querySelector('h1, h2');
       focus?.focus({ preventScroll: true });
     }
   }

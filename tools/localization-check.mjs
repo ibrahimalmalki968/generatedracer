@@ -25,8 +25,8 @@ async function customer(name, language, invite) {
   await p.evaluate(async () => {
     const { Network } = await import('/js/network.js'); const { AiController } = await import('/js/ai.js'); const { Car } = await import('/js/car.js');
     const connect = Network.prototype.connect, predict = Network.prototype.predict, send = Network.prototype.send;
-    Network.prototype.connect = function(n) { window.qaNet = this; return connect.call(this, n); };
-    Network.prototype.send = function(m) { if (m.type !== 'input') (window.qaCommands ||= []).push(m.type); return send.call(this, m); };
+    Network.prototype.connect = function(n) { window.qaNet = this; const result = connect.call(this, n); this.socket?.addEventListener('close', e => { window.qaClose = { code: e.code, reason: e.reason }; }); return result; };
+    Network.prototype.send = function(m) { if (m.type !== 'input') (window.qaCommands ||= []).push(m.type); else { (window.qaInputTimes ||= []).push(performance.now()); if (window.qaInputTimes.length > 1000) window.qaInputTimes.shift(); } return send.call(this, m); };
     Network.prototype.predict = function(input) {
       const c = this.predicted;
       if (window.qaDrive && c && !c.finished) {
@@ -76,8 +76,8 @@ try {
   await host.evaluate(async () => {
     const { Network } = await import('/js/network.js'); const connect = Network.prototype.connect, predict = Network.prototype.predict, send = Network.prototype.send;
     const { AiController } = await import('/js/ai.js'); const { Car } = await import('/js/car.js');
-    Network.prototype.connect = function(n) { window.qaNet = this; return connect.call(this, n); };
-    Network.prototype.send = function(m) { if (m.type !== 'input') (window.qaCommands ||= []).push(m.type); return send.call(this, m); };
+    Network.prototype.connect = function(n) { window.qaNet = this; const result = connect.call(this, n); this.socket?.addEventListener('close', e => { window.qaClose = { code: e.code, reason: e.reason }; }); return result; };
+    Network.prototype.send = function(m) { if (m.type !== 'input') (window.qaCommands ||= []).push(m.type); else { (window.qaInputTimes ||= []).push(performance.now()); if (window.qaInputTimes.length > 1000) window.qaInputTimes.shift(); } return send.call(this, m); };
     Network.prototype.predict = function(input) { const c = this.predicted; if (window.qaDrive && c && !c.finished) { const g = new Car(c.id, c.x, c.y, c.angle, { isHuman: false }); Object.assign(g, { speed: c.speed, lap: c.lap, turboAvailable: c.turboAvailable }); new AiController(g).update(1 / 60); input = g.input; } return predict.call(this, input); };
   });
   await switchTo(host, 'ar'); await host.locator('#nickname').fill('عمر Racer'); await host.locator('#nicknameForm button').click(); await host.locator('#modeMenu').waitFor({ state: 'visible' });
@@ -182,7 +182,7 @@ try {
   report.failed = e.stack; process.exitCode = 1;
   for (const [i, p] of pages.entries()) if (!p.isClosed()) {
     await p.screenshot({ path: evidence + '/failure-' + i + '.png', scale: 'css' }).catch(() => {});
-    const state = await p.evaluate(() => ({ lang: document.documentElement.lang, text: document.body.innerText, phase: window.qaNet?.room?.phase, snapshot: window.qaNet?.latest })).catch(() => null);
+    const state = await p.evaluate(() => ({ lang: document.documentElement.lang, text: document.body.innerText, phase: window.qaNet?.room?.phase, close: window.qaClose, inputTimes: window.qaInputTimes, snapshot: window.qaNet?.latest })).catch(() => null);
     await writeFile(evidence + '/failure-' + i + '.json', JSON.stringify(state, null, 2));
   }
 } finally {

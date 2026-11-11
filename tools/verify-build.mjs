@@ -8,6 +8,9 @@ try {
   const html = await (await fetch(base)).text();
   assert.match(html, /<html lang="ar" dir="rtl">/); assert.match(html, /data-i18n="entry.nickname"/);
   assert.equal((await fetch(base + '/shared/translations.js')).status, 200);
+  const artwork = await fetch(base + '/assets/menu-kart.webp');
+  assert.equal(artwork.status, 200); assert.match(artwork.headers.get('content-type'), /image\/webp/);
+  assert.ok((await artwork.arrayBuffer()).byteLength < 80000, 'menu art stays within its 80 KB budget');
   assert.match(await (await fetch(`${base}/LICENSE`)).text(), /Jeroen Willemsen/);
   const ws = new WebSocket(`ws://127.0.0.1:${s.port}/socket`);
   const snapshot = new Promise((resolve, reject) => {

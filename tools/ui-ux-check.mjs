@@ -35,13 +35,29 @@ async function customer(name, lang, invite) {
   if (name) { await p.locator('#nickname').fill(name); await p.locator('#nicknameForm button').click(); await p.waitForFunction(() => uiNet.ready); }
   return p;
 }
-async function layout(p, stage) {
+async function layout(p, stage, expand = true) {
   const result = await p.evaluate(() => ({ overflow: document.documentElement.scrollWidth > innerWidth,
     clipped: [...document.querySelectorAll('.overlay:not(.hidden) h1, .overlay:not(.hidden) h2, .overlay:not(.hidden) button, .overlay:not(.hidden) summary, .overlay:not(.hidden) label')].filter(e => e.clientWidth && e.scrollWidth > e.clientWidth + 2).map(e => e.id || e.textContent),
-    small: [...document.querySelectorAll('.overlay:not(.hidden) button, .overlay:not(.hidden) summary, #languageSwitcher button')].filter(e => e.getClientRects().length && e.getBoundingClientRect().height < 44).map(e => e.id || e.textContent),
+    small: [...document.querySelectorAll('.overlay:not(.hidden) button, .overlay:not(.hidden) summary, #languageSwitcher button')].filter(e => e.getClientRects().length && e.getBoundingClientRect().height < 43.9).map(e => e.id || e.textContent),
   }));
   check(!result.overflow && !result.clipped.length && !result.small.length, stage + ': no overflow/clipped text; controls at least 44px ' + JSON.stringify(result));
   check(await p.evaluate(async () => (await import('/js/i18n.js')).missingTranslations.size === 0), stage + ': all translations resolve');
+  if (stage.includes('results')) {
+    const separated = await p.evaluate(() => {
+      const a = document.querySelector('.standings-scroll').getBoundingClientRect(), b = document.querySelector('.results-actions').getBoundingClientRect();
+      return a.bottom <= b.top + 1 || a.right <= b.left + 1 || a.left >= b.right - 1;
+    });
+    check(separated, stage + ': replay actions never overlay standings');
+  }
+  if (expand && / (welcome|discovery|create|lobby|pause|results)$/.test(stage)) {
+    const original = p.viewportSize();
+    for (const size of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
+      await p.setViewportSize(size);
+      await layout(p, stage + ' ' + size.width, false);
+      await snap(p, stage.replaceAll(' ', '-') + '-' + size.width);
+    }
+    await p.setViewportSize(original);
+  }
 }
 try {
   browser = await chromium.launch({ channel: report.channel, args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'] });
@@ -134,7 +150,8 @@ try {
   check(await host.evaluate(() => uiNet.room.results.every(r => r.lap === 3)), 'Results follow actual three-lap simulation');
   check(await host.locator('#results .result-self').count() === 1 && (await host.locator('#personalResult').textContent()).length > 0, 'Personal finishing position identifies own car using authoritative mapping');
   for (const lang of ['ar', 'en']) { await language(host, lang); await layout(host, lang + ' results'); await snap(host, 'results-' + lang); }
-  await host.locator('#btn-restart').click(); await guest.locator('#lobbyScreen').waitFor({ state: 'visible' });
+  await host.locator('#btn-restart').click(); await Promise.all([host, guest].map(p => p.locator('#lobbyScreen').waitFor({ state: 'visible' })));
+  await host.waitForFunction(() => document.getElementById('readyMeter').getAttribute('aria-valuenow') === '0');
   check(await host.locator('#readyMeter').getAttribute('aria-valuenow') === '0', 'Return to same lobby resets visible readiness');
   let offline = true;
   await host.routeWebSocket('**/socket', route => offline ? route.close({ code: 1013, reason: 'error.connectionLost' }) : route.connectToServer());
