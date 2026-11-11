@@ -1,5 +1,7 @@
 # Implemented MVP architecture
 
+Current browser architecture is one player/input/HUD/full-viewport camera per device. Both Solo and Multiplayer are server-backed. There is no browser-local race entry or view splitting. `LocalSession` is retained as the shared in-process simulation used by the server for 1–6-human room composition; it does not expose a local two-player game mode. See ONE_PLAYER_PER_DEVICE.md.
+
 ## Process and boundaries
 
 One Node 22+ process serves the frontend over HTTP and accepts WebSockets at `/socket`. `server/server.js` owns transport, size/rate limits, liveness and the simulation scheduler; `server/static.js` exposes only client assets, LICENSE and `/health`. There is no database or separate frontend development service.

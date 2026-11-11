@@ -23,15 +23,6 @@
     <div class="race-identity"><span id="hud-driver" dir="auto"></span><div id="hud-progress" class="lap-segments" aria-hidden="true"><i></i><i></i><i></i></div></div>
     <button id="hud-turbo" class="turbo-btn" aria-label="" data-i18n-aria-label="control.turbo"><strong data-i18n="hud.turbo"></strong><small data-i18n="hud.turboAvailable"></small></button>
   </div>
-  <div id="hud2" class="hud hidden">
-    <div class="hud-top">
-      <div class="hud-pill position-pill"><small data-i18n="hud.p2Position"></small><strong id="hud2-position" data-i18n="position.1"></strong></div>
-      <div class="hud-pill lap-pill"><strong id="hud2-lap" data-i18n="hud.lap" data-i18n-params='{"lap":1,"total":3}'></strong><span id="hud2-time">0:00.000</span></div>
-      <div class="hud-pill speed-pill"><strong id="hud2-speed">0</strong><small data-i18n="hud.speedUnit"></small></div>
-    </div>
-    <div class="race-identity"><span id="hud2-driver" dir="auto"></span><div id="hud2-progress" class="lap-segments" aria-hidden="true"><i></i><i></i><i></i></div></div>
-    <button id="hud2-turbo" class="turbo-btn" aria-label="" data-i18n-aria-label="control.turbo2"><strong data-i18n="hud.turbo"></strong><small data-i18n="hud.turboAvailable"></small></button>
-  </div>
   <div id="touchControls" class="hidden" aria-label="" data-i18n-aria-label="control.driving">
     <div class="touch-side">
       <button id="btn-left" class="touch-btn" aria-label="" data-i18n-aria-label="control.left"><span data-icon="left" aria-hidden="true"></span></button>
@@ -42,8 +33,8 @@
       <button id="btn-gas" class="touch-btn gas" aria-label="" data-i18n-aria-label="control.gas"><span data-icon="gas" aria-hidden="true"></span><small data-i18n="ui.gas"></small></button>
     </div>
   </div>
-  <div id="raceToolbar" class="hidden"><button id="btn-pause" aria-label="" data-i18n-aria-label="race.pauseLabel" ><span data-icon="pause" aria-hidden="true"></span><span class="button-label" data-i18n="race.pause"></span></button></div>
-  <div id="keyHint" class="hidden" aria-hidden="true"><span data-i18n="control.keys"></span><span class="split-hint" data-i18n="control.splitKeys"></span></div>
+  <div id="raceToolbar" class="hidden"><button id="btn-pause" aria-label="" data-i18n-aria-label="race.onlineMenu" ><span data-icon="pause" aria-hidden="true"></span><span class="button-label" data-i18n="race.onlineMenu"></span></button></div>
+  <div id="keyHint" class="hidden" aria-hidden="true"><span data-i18n="control.keys"></span></div>
   <p id="raceAnnouncement" class="sr-only" role="status"></p>
   <p id="raceStatus" class="hidden" role="status"></p>
   <div id="countdown" class="hidden" aria-live="assertive"><div class="countdown-content"><div class="start-lights" aria-hidden="true"><i></i><i></i><i></i></div><span id="countdownNum">3</span><strong data-i18n="ui.onGrid"></strong><p data-i18n="mode.hint"></p></div></div>
@@ -60,7 +51,6 @@
         <input aria-describedby="entryHint appMessage" enterkeyhint="go" id="nickname" name="nickname" maxlength="40" autocomplete="nickname" placeholder="" data-i18n-placeholder="entry.placeholder" required dir="auto" />
         <button class="btn primary" type="submit" data-i18n="entry.continue"></button>
       </form><p id="entryHint" class="help" data-i18n="entry.hint"></p>
-      <details class="local-play"><summary data-i18n="local.title"></summary><p data-i18n="local.description"></p><button id="btn-splitscreen" class="btn secondary" data-i18n="local.start"></button></details>
       <details><summary data-i18n="help.title"></summary><p data-i18n="help.driving"></p></details>
       <footer><a href="https://github.com/commjoen/generatedracer" target="_blank" rel="noopener noreferrer" data-i18n="footer.credit"></a><a href="LICENSE" data-i18n-title="footer.licenseHint" title="" target="_blank" rel="noopener" data-i18n="footer.license"></a><p id="menu-version"></p></footer>
     </section>
@@ -99,7 +89,7 @@
     <button id="btn-lobby-menu" class="text-btn" data-i18n="nav.main"></button>
   </section></div>
   <div id="pauseMenu" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
-    <section class="panel"><div class="state-emblem" data-icon="pause" aria-hidden="true"></div><p class="screen-label" data-i18n="pause.tag"></p><h2 id="pauseTitle" data-i18n="pause.title"></h2><p id="pauseDescription" class="subtitle" data-i18n="pause.description"></p><button id="btn-resume" class="btn primary" data-i18n="pause.resume"></button><button id="btn-leave" class="btn secondary" data-i18n="pause.leave"></button></section>
+    <section class="panel"><div class="state-emblem" data-icon="pause" aria-hidden="true"></div><p class="screen-label" data-i18n="pause.tag"></p><h2 id="pauseTitle" data-i18n="pause.onlineTitle"></h2><p id="pauseDescription" class="subtitle" data-i18n="pause.onlineDescription"></p><button id="btn-resume" class="btn primary" data-i18n="pause.resume"></button><button id="btn-leave" class="btn secondary" data-i18n="pause.leave"></button></section>
   </div>
   <div id="raceOver" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="resultsTitle">
     <section class="panel results-panel"><div class="results-heading"><div class="state-emblem trophy" data-icon="trophy" aria-hidden="true"></div><p class="screen-label" data-i18n="results.tag"></p><h2 id="resultsTitle" data-i18n="results.title"></h2><div class="winner-block"><strong id="winnerName" dir="auto"></strong><p id="resultsSummary" class="help"></p><strong id="personalResult"></strong></div></div><div class="standings-scroll" tabindex="0" role="region" data-i18n-aria-label="results.positions"><ol id="results" aria-label="" data-i18n-aria-label="results.positions"></ol><p id="resultsHint" class="help"></p></div><div class="results-actions"><button id="btn-restart" class="btn primary"><span data-icon="replay" aria-hidden="true"></span><span class="button-label" data-i18n="results.playAgain"></span></button><button id="btn-menu" class="btn secondary" data-i18n="nav.main"></button></div></section>

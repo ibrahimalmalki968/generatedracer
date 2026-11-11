@@ -1,5 +1,7 @@
 # Fresh fork audit — 10 November 2026
 
+> Product update: local shared-device racing was subsequently removed completely. References below describe the historical implementation/plan. Current policy and verification: [one player per device](ONE_PLAYER_PER_DEVICE.md).
+
 This audit and the confirmed requirements below supersede the earlier exploratory roadmap. In particular, there is no race time limit, no finish grace expiration, no timed Turbo recharge and no weapons.
 
 ## Repository and environment

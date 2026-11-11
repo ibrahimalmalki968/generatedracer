@@ -45,9 +45,8 @@ No required environment variables. `HOST` defaults to `0.0.0.0`, `PORT` to `8081
 | Phone | Hold steering, accelerator, brake/reverse buttons | Tap TURBO |
 | Keyboard | WASD or arrow keys | E or L |
 | Gamepad | Stick/D-pad, RT/LT | A |
-| Optional local splitscreen | P1 WASD, P2 arrows | P1 E, P2 L |
 
-Brake overrides gas. Online blur/backgrounding releases controls and never pauses the room. The in-race menu explicitly says that racing continues. Local keyboard splitscreen is retained as an optional shared-device mode under the entry screen; the café solo/multiplayer journey always uses the unified room lobby.
+Brake overrides gas. Online blur/backgrounding releases controls and never pauses the room. The in-race menu explicitly says that racing continues. Every device has one player, one input handler and one full-screen racing view. The only modes are Solo Race (five AI opponents) and room-based online Multiplayer (2–6 humans on separate devices).
 
 ## Verify and package
 

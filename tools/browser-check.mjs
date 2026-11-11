@@ -1,3 +1,4 @@
+import { singleDeviceView } from '../tests/browser-single-view.mjs';
 import { chromium } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -73,6 +74,7 @@ try {
     for (const p of racers) await p.getByRole('button', { name: 'Ready', exact: true }).tap();
     await Promise.all(racers.map(p => p.waitForFunction(() => window.testNet?.latest?.cars.length === 6)));
     check(await host.evaluate(() => testNet.latest.cars.every(c => c.isHuman)), 'Six browser racers have no AI fill');
+    for (const [i, p] of racers.entries()) await singleDeviceView(p, check, 'Six-human device ' + (i + 1));
     for (const viewport of [{ width: 320, height: 568 }, { width: 360, height: 640 }, { width: 390, height: 844 }, { width: 412, height: 915 }, { width: 844, height: 390 }]) {
       await host.setViewportSize(viewport); await host.waitForTimeout(70);
       const layout = await host.evaluate(() => ['hud-position', 'hud-lap', 'hud-speed', 'hud-time', 'hud-turbo', 'btn-left', 'btn-right', 'btn-gas', 'btn-brake', 'btn-pause'].map(id => {

@@ -1,5 +1,7 @@
 # UI/UX transformation — implementation and verification
 
+> Product update: local shared-device racing was subsequently removed completely. References below describe the historical implementation/plan. Current policy and verification: [one player per device](ONE_PLAYER_PER_DEVICE.md).
+
 11 November 2026 · `deploy/public-mvp` · baseline `c23cdaf`
 
 ## Delivery
@@ -56,7 +58,7 @@ Above-the-fold copy is drawn from the existing localization keys and the documen
 
 ## Screenshot delivery
 
-Representative evidence is included in `docs/ui-ux/` (about 268 KB total, excluded from runtime serving/build). These are actual browser captures, not mockups. The before images are baseline Chrome; final after images are public Edge at 390×844. User-entered test nicknames remain literal.
+Representative evidence is included in `docs/ui-ux/` (about 268 KB total, excluded from runtime serving/build). These are actual browser captures, not mockups. The before images are baseline Chrome; after images are the public UI transformation in Edge at 390×844, with the welcome image subsequently updated from Chrome after removing local shared-device play. User-entered test nicknames remain literal.
 
 | Surface | Before | After |
 | --- | --- | --- |

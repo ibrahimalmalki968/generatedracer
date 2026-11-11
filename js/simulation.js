@@ -1,4 +1,4 @@
-/** Local race composition, independent of browser rendering and input devices. */
+/** Shared room simulation, independent of browser rendering and input devices. */
 import { Car, resolveCarCollision } from './car.js';
 import { AiController } from './ai.js';
 import { RaceManager } from './race.js';
@@ -16,7 +16,7 @@ export class LocalSession {
   constructor(humans = 1) {
     if (!Number.isInteger(humans) || humans < 1 || humans > 6) throw new RangeError('Races support one to six humans.');
     this.humans = humans;
-    // Solo has five AI; local two-human races have no AI filling empty slots.
+    // Solo has five AI; online races with 2–6 humans never fill empty slots with AI.
     this.cars = Array.from({ length: humans === 1 ? 1 + NUM_AI : humans }, (_, id) => {
       const p = START_POSITIONS[id];
       const nameKey = id < humans ? humans === 1 ? 'name.you' : 'name.player' : 'name.ai';

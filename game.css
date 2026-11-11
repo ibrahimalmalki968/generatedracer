@@ -153,7 +153,6 @@ button.pressed { background: #e9ffb6; color: var(--ink); border-color: var(--acc
 .touch-btn.gas { background: var(--accent); color: var(--ink); border-color: var(--accent); }
 .touch-btn.brake { background: #3c252bf2; color: #ffd1ca; border-color: #cf8b86; }
 #keyHint { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--text); background: #0b1018ed; padding: 8px 12px; border-radius: 8px; pointer-events: none; max-width: 70%; text-align: center; }
-.split-hint { display: none; }
 #countdown { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; background: #0b101830; }
 .countdown-content { text-align: center; padding: 20px 12px; color: var(--text); background: #0b1018ed; border: 1px solid #53617b; border-radius: 20px; width: min(280px, calc(100vw - 48px)); }
 #countdownNum { display: block; font: italic 900 110px/1.2 Bahnschrift, 'Arial Black', Arial, sans-serif; color: var(--accent); }
@@ -191,16 +190,6 @@ button.pressed { background: #e9ffb6; color: var(--ink); border-color: var(--acc
 .message-actions button { min-height: 44px; padding: 8px 16px; border-radius: 8px; background: var(--raised); color: var(--text); border: 1px solid #667993; font-size: 14px; }
 body[data-screen='racing'] .app-message { top: calc(var(--header-height) + 146px); bottom: auto; }
 body[data-screen='racing'] .message-actions { top: calc(var(--header-height) + 222px); bottom: auto; }
-body.splitscreen #hud { right: 50%; }
-body.splitscreen #hud2 { left: 50%; }
-body.splitscreen .hud-top { gap: 4px; padding-inline: 8px; }
-body.splitscreen .hud-pill { padding: 5px 4px; }
-body.splitscreen .hud-pill strong { font-size: clamp(11px, 2vw, 20px); }
-body.splitscreen .hud-pill small { font-size: 9px; }
-body.splitscreen .hud-pill span { font-size: 10px; }
-body.splitscreen .turbo-btn { bottom: max(16px, env(safe-area-inset-bottom)); width: 120px; }
-body.splitscreen #keyHint { bottom: 86px; }
-body.splitscreen .split-hint { display: inline; }
 @keyframes arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes countdown-tick { from { transform: scale(1.12); opacity: .6; } to { transform: scale(1); opacity: 1; } }

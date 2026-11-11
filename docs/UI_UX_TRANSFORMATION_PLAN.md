@@ -1,5 +1,7 @@
 # GenerateRacer UI/UX transformation plan
 
+> Product update: local shared-device racing was subsequently removed completely. References below describe the historical implementation/plan. Current policy and verification: [one player per device](ONE_PLAYER_PER_DEVICE.md).
+
 11 November 2026 · baseline `c23cdaf` · branch `deploy/public-mvp`
 
 ## 1. Assessment and evidence

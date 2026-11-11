@@ -1,6 +1,6 @@
 # Midnight Circuit UI system
 
-The GenerateRacer name, original racing Canvas and MIT attribution remain intact. Arabic is primary; English uses the same components. No framework, external font or runtime dependency was added.
+Each device has one player, one input handler, one full-screen camera and one HUD; only Solo Race and online Multiplayer are offered. The GenerateRacer name, original racing Canvas and MIT attribution remain intact. Arabic is primary; English uses the same components. No framework, external font or runtime dependency was added.
 
 ## Tokens
 

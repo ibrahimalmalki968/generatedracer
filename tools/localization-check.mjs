@@ -1,3 +1,4 @@
+import { singleDeviceView } from '../tests/browser-single-view.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -113,6 +114,7 @@ try {
   const deadline = await host.evaluate(() => qaNet.room.startAt); await switchTo(host, 'ar');
   check(await host.evaluate(before => qaNet.room.startAt === before, deadline), 'Countdown language switch preserves common server deadline');
   await Promise.all([host, guest].map(p => p.waitForFunction(() => qaNet.latest?.cars.length === 2)));
+  await singleDeviceView(host, check, 'Arabic multiplayer'); await singleDeviceView(guest, check, 'English multiplayer');
   await layout(host, 'ar', 'Arabic HUD'); await layout(guest, 'en', 'English HUD');
   check((await host.locator('#hud-lap').textContent()).includes('\u20661 / 3\u2069'), 'Arabic HUD isolates 1 / 3 as an LTR numeric fraction');
   for (const viewport of [{ width: 320, height: 568 }, { width: 360, height: 640 }, { width: 390, height: 844 }, { width: 412, height: 915 }, { width: 844, height: 390 }]) {
@@ -164,6 +166,8 @@ try {
     await host.locator('#btn-menu').click(); await host.locator('#modeMenu').waitFor({ state: 'visible' });
     for (const language of ['ar', 'en']) {
       await switchTo(host, language); await host.locator('#btn-solo').click(); console.log('Driving solo AI race in ' + language + '…');
+      await host.waitForFunction(() => qaNet.latest?.cars.length === 6);
+      await singleDeviceView(host, check, language + ' solo');
       await results(host, language);
       check(await host.locator('#results .name').allTextContents().then(names => names.some(n => n.includes(language === 'ar' ? 'المنافس الآلي' : 'CPU'))), language + ': generated AI names localized');
       await host.locator('#btn-menu').click(); await host.locator('#modeMenu').waitFor({ state: 'visible' });

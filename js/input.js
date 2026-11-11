@@ -1,7 +1,6 @@
 /** Unified keyboard, captured-pointer and gamepad controls. */
 export class InputHandler {
-  constructor(keySet = 'all') {
-    this.keySet = keySet;
+  constructor() {
     this.enabled = false;
     this._keys = new Set();
     this._pointers = new Map();
@@ -24,7 +23,7 @@ export class InputHandler {
   _action(code) {
     const wasd = { KeyA: 'left', KeyD: 'right', KeyW: 'gas', KeyS: 'brake', KeyE: 'turbo' };
     const arrows = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'gas', ArrowDown: 'brake', KeyL: 'turbo' };
-    return (this.keySet !== 'arrows' && wasd[code]) || (this.keySet !== 'wasd' && arrows[code]);
+    return wasd[code] || arrows[code];
   }
 
   _key(e, down) {
@@ -73,7 +72,7 @@ export class InputHandler {
 
   pollGamepad() {
     this._gamepad = {};
-    if (!this.enabled || this.keySet === 'arrows') return;
+    if (!this.enabled) return;
     let gp;
     try { gp = [...(navigator.getGamepads?.() || [])].find(Boolean); }
     catch { return; } // A denied Gamepad API must not stop touch/keyboard racing.

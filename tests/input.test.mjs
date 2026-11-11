@@ -41,6 +41,21 @@ test('blur clears held controls and disabled handlers ignore input', () => setup
   event(window, 'blur'); assert.equal(h.get().gas, 0);
   h.setEnabled(false); event(window, 'keydown', { code: 'KeyW' }); assert.equal(h.get().gas, 0);
 }));
+
+test('WASD and arrows are alternatives for the same device player, including Turbo', () => setup(h => {
+  for (const code of ['KeyW', 'ArrowUp']) {
+    event(window, 'keydown', { code }); assert.equal(h.get().gas, 1);
+    event(window, 'keyup', { code }); assert.equal(h.get().gas, 0);
+  }
+  for (const code of ['KeyA', 'ArrowLeft']) {
+    event(window, 'keydown', { code }); assert.equal(h.get().steer, -1);
+    event(window, 'keyup', { code }); assert.equal(h.get().steer, 0);
+  }
+  for (const code of ['KeyE', 'KeyL']) {
+    event(window, 'keydown', { code }); assert.equal(h.get().turbo, true);
+    event(window, 'keyup', { code }); assert.equal(h.get().turbo, false);
+  }
+}));
 test('form focus does not drive; brake wins; gamepad D-pad works with neutral stick', () => setup((h, setPads) => {
   h._key({ code: 'KeyW', target: { closest: () => true }, preventDefault() {} }, true);
   assert.equal(h.get().gas, 0);

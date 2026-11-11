@@ -1,5 +1,13 @@
 # Verification results — 10 November 2026
 
+## Current product change — one player per device
+
+All local shared-device UI, split views, extra input/HUD paths and 11 obsolete paired translations are removed. The browser only renders server-backed Solo or online Multiplayer. **75 automated tests passed, zero failed/skipped**. Full local gameplay browser regression: **170 each in Chrome and Edge**. Full public bilingual race journeys: **140 each in Chrome and Edge**. Expanded UI/removal/legacy-route checks: **155 in Chrome local and 155 in Edge public**. Zero captured app errors/missing translation keys. Production build/runtime smoke and direct HTTP asset equality passed. No server restart or new dependencies were needed.
+
+The new Canvas-frame helper asserts one full-viewport camera per racing frame on each of six separate browser clients; a full-size Canvas containing multiple subviews cannot pass this assertion. Public bilingual checks repeat this for Arabic/English human clients and solo AI races. Native socket tests preserve full 2–6-human races, independent inputs/rooms and exact lap/Turbo/results rules. Old local composition coverage was replaced with the shared server engine's 2–6-human no-AI-fill check; keyboard tests prove WASD/arrows operate the same device player. Legacy query/hash navigation cannot start a local race. See [one-player report](ONE_PLAYER_PER_DEVICE.md) for files, screenshots and raw evidence paths.
+
+The following UI transformation entries describe earlier milestones. Physical iPhone/Safari verification of this change was not performed by the agent.
+
 ## 11 November — complete Midnight Circuit UI/UX transformation
 
 | Actual suite | Result | Evidence directory (workspace outputs) |

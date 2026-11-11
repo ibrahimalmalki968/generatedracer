@@ -1,3 +1,4 @@
+import { singleDeviceView } from '../tests/browser-single-view.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -62,11 +63,15 @@ async function layout(p, stage, expand = true) {
 try {
   browser = await chromium.launch({ channel: report.channel, args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows'] });
   report.version = browser.version();
-  const host = await customer();
+  const legacy = new URL(url); legacy.searchParams.set('mode', 'splitscreen'); legacy.searchParams.set('players', '2'); legacy.hash = 'splitscreen';
+  const host = await customer(null, null, legacy.href);
+  check(await host.locator('#mainMenu').isVisible() && await host.locator('#hud').isHidden(), 'Legacy local-mode query/hash opens normal entry without starting any race');
   check(await host.title() === translate('ar', 'page.title') && await host.locator('#mainMenu').isVisible(), 'Arabic default: correct page identity and meaningful welcome screen');
   check(await host.evaluate(async () => { const r = await fetch('/assets/menu-kart.webp'); return r.ok && r.headers.get('content-type').startsWith('image/webp'); }), 'Optimized artwork loads with correct image type');
   for (const lang of ['ar', 'en']) {
-    await language(host, lang); await layout(host, lang + ' welcome'); await snap(host, 'welcome-' + lang);
+    await language(host, lang);
+    check(await host.locator('#btn-splitscreen, #hud2, .local-play, [data-i18n^="local."]').count() === 0, lang + ': no local two-player menu, instructions, buttons or extra HUD');
+    await layout(host, lang + ' welcome'); await snap(host, 'welcome-' + lang);
   }
   await host.locator('#nicknameForm button').click();
   check(await host.locator('#nickname').getAttribute('aria-invalid') === 'true', 'Invalid nickname is associated with its input'); await snap(host, 'nickname-error-en');
@@ -128,6 +133,7 @@ try {
     await language(host, lang);
     for (const size of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
       await host.setViewportSize(size);
+      await singleDeviceView(host, check, lang + ' ' + size.width);
       const targets = await host.evaluate(() => ['btn-left', 'btn-right', 'btn-brake', 'btn-gas', 'hud-turbo', 'btn-pause'].map(id => {
         const e = document.getElementById(id), r = e.getBoundingClientRect(); return { id, h: r.height, w: r.width, hit: document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('button')?.id };
       }));

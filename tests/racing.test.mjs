@@ -108,10 +108,13 @@ test('braking overrides acceleration', () => {
   const c = car(); c.speed = 200; c.input = { gas: 1, brake: 1, steer: 0, turbo: false };
   c.update(SIMULATION_STEP); assert.ok(c.speed < 200);
 });
-test('solo has five AI; local two-human race has only two humans; AI cannot override a human', () => {
-  const solo = new LocalSession(1), split = new LocalSession(2);
+test('shared room simulation has five solo AI and no AI fill for 2–6 humans; AI cannot override a human', () => {
+  const solo = new LocalSession(1);
   assert.equal(solo.cars.length, 6); assert.equal(solo.ai.length, 5);
-  assert.equal(split.cars.length, 2); assert.equal(split.ai.length, 0);
+  for (let humans = 2; humans <= 6; humans++) {
+    const room = new LocalSession(humans);
+    assert.equal(room.cars.length, humans); assert.equal(room.ai.length, 0);
+  }
   const c = car(); c.input.steer = -1; new AiController(c).update(SIMULATION_STEP, 0);
   assert.equal(c.input.steer, -1);
 });

@@ -9,7 +9,7 @@ Arabic is the default, including when the browser itself uses English. The alway
 - Lobby, HUD and browser composition render dynamic values again on a language event. Results can change language without changing the frozen standings. Canvas labels use the selected language and the system Arabic font fallback.
 - Generated AI/local-player/room labels carry `nameKey`/`nameParams` metadata. Human nicknames and custom room names remain literal user text. Rendering never guesses a name's meaning from text such as `CPU 1`.
 
-Numbers use the same Latin digits in both languages. Lap fractions and times are isolated left-to-right; room codes and URLs are LTR. Names use bidi isolation/automatic direction. RTL changes the interface, not track coordinates, cameras, keyboard bindings, steering, brake/gas order or local splitscreen placement. System fonts are used; no fonts, translation services or dependencies were added.
+Numbers use the same Latin digits in both languages. Lap fractions and times are isolated left-to-right; room codes and URLs are LTR. Names use bidi isolation/automatic direction. RTL changes the interface, not track coordinates, cameras, keyboard bindings, steering or brake/gas order. System fonts are used; no fonts, translation services or dependencies were added.
 
 ## Server messages
 

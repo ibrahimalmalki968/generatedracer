@@ -1,5 +1,7 @@
 # Phase 1 delivery and verification
 
+> Product update: local shared-device racing was subsequently removed completely. References below describe the historical implementation/plan. Current policy and verification: [one player per device](ONE_PLAYER_PER_DEVICE.md).
+
 Date: 10 November 2026. Branch: `feat/phase-1-mobile-racing`. Baseline: `0a0cb3cb388b9f0583494727f398b7f355375972`. Status: implemented and tested locally; stopped before Phase 2. No remote push, public deployment, paid service, database or dependencies installed.
 
 ## Completed behavior

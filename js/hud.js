@@ -2,7 +2,8 @@ import { NUM_LAPS } from './constants.js';
 import { formatTime } from './race.js';
 import { t, ordinal, displayNameOf } from './i18n.js';
 export class Hud {
-  constructor(id = 'hud') {
+  constructor() {
+    const id = 'hud';
     this.id = id;
     this.el = document.getElementById(id);
     this.turbo = document.getElementById(`${id}-turbo`);
@@ -26,7 +27,7 @@ export class Hud {
     this.turbo.setAttribute('aria-disabled', 'true'); this.turbo.classList.remove('used', 'boosting');
     this.nodes.get('lap').closest('.lap-pill').classList.remove('lap-changed');
     this.segments.forEach((segment, i) => { segment.classList.remove('complete'); segment.classList.toggle('current', i === 0); });
-    if (this.id === 'hud') document.getElementById('raceAnnouncement').textContent = '';
+    document.getElementById('raceAnnouncement').textContent = '';
   }
   update(car, race) {
     if (this.lastCar !== car.participantId + ':' + car.id) { this.lastLap = null; this.lastCar = car.participantId + ':' + car.id; }
@@ -43,10 +44,8 @@ export class Hud {
       else if (car.lap === 0) this.announcement = null;
       this.lastLap = car.lap;
     }
-    if (this.id === 'hud') {
-      const announcement = document.getElementById('raceAnnouncement'), copy = this.announcement ? t(this.announcement.key, this.announcement.params) : '';
-      if (announcement.textContent !== copy) announcement.textContent = copy;
-    }
+    const announcement = document.getElementById('raceAnnouncement'), copy = this.announcement ? t(this.announcement.key, this.announcement.params) : '';
+    if (announcement.textContent !== copy) announcement.textContent = copy;
     const status = t(car.finished ? 'hud.finished' : car.turboActive ? 'hud.boosting' : car.turboAvailable ? 'hud.turbo' : 'hud.used');
     if (this.turboTitle.textContent !== status) this.turboTitle.textContent = status;
     const caption = t(car.finished ? 'hud.complete' : car.turboAvailable ? 'hud.turboAvailable' : 'hud.turboNext');
