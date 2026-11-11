@@ -110,6 +110,7 @@ try {
   await host.evaluate(() => { navigator.clipboard.writeText = async () => { throw new Error('Denied'); }; });
   await host.locator('#btn-share').click();
   check(await host.locator('#inviteLink').evaluate(e => e.closest('details').open && e.selectionEnd - e.selectionStart === e.value.length), 'Denied clipboard opens and selects manual link fallback');
+  check(await host.locator('#inviteLink').evaluate(e => parseFloat(getComputedStyle(e).fontSize) >= 16), 'Invitation link retains 16px text to avoid small-input focus zoom');
   await host.locator('#btn-message-dismiss').click(); await host.locator('#lobbyScreen details summary').click();
   const guest = await customer('Alex', 'en', invite); await guest.locator('#lobbyScreen').waitFor({ state: 'visible' });
   await host.waitForFunction(() => uiNet.room.players.length === 2);
