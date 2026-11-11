@@ -154,6 +154,11 @@ try {
   await host.locator('#btn-restart').click(); await Promise.all([host, guest].map(p => p.locator('#lobbyScreen').waitFor({ state: 'visible' })));
   await host.waitForFunction(() => document.getElementById('readyMeter').getAttribute('aria-valuenow') === '0');
   check(await host.locator('#readyMeter').getAttribute('aria-valuenow') === '0', 'Return to same lobby resets visible readiness');
+  for (const p of [host, guest]) await p.locator('#btn-room-start').click();
+  await host.locator('#countdown').waitFor({ state: 'visible' });
+  check(await host.locator('#hud-time').textContent() === '0:00.000' && await host.locator('#hud-lap').textContent() === translate('en', 'hud.lap', { lap: 1, total: 3 }), 'Rematch countdown clears previous Finished/laps/timer');
+  check(await host.locator('#hud-turbo').getAttribute('aria-disabled') === 'true' && await host.locator('#hud-turbo').evaluate(e => !e.classList.contains('used') && !e.classList.contains('boosting')), 'Fresh countdown prepares Turbo without activating or spending it');
+  await host.locator('#btn-cancel-countdown').click(); await host.locator('#lobbyScreen').waitFor({ state: 'visible' });
   let offline = true;
   await host.routeWebSocket('**/socket', route => offline ? route.close({ code: 1013, reason: 'error.connectionLost' }) : route.connectToServer());
   await host.evaluate(() => uiNet.socket.close()); await host.locator('#mainMenu').waitFor({ state: 'visible' });

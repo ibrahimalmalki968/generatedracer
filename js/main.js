@@ -213,6 +213,7 @@ network.addEventListener('room', e => {
     state = room.solo ? 'modes' : 'lobby'; session = null; cameras = []; drawingCars.clear(); setInputs(false);
   } else if (room.phase === 'countdown') {
     state = 'countdown'; session = null; cameras = []; drawingCars.clear(); accumulator = 0; setInputs(false);
+    hud.prepare(room.players.find(p => p.id === network.playerId)?.nickname || network.nickname);
   } else if (room.phase === 'racing') {
     if (state !== 'racing') { accumulator = 0; setInputs(true); }
     state = 'racing';

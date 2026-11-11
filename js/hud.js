@@ -15,6 +15,19 @@ export class Hud {
     const el = this.nodes.get(key);
     if (el.textContent !== value) el.textContent = value;
   }
+  prepare(name) {
+    // Countdown has no new authoritative car snapshot yet. Never show the
+    // previous race's Finished/Turbo/timing values while the new grid loads.
+    this.lastCar = null; this.lastLap = 0; this.announcement = null;
+    this._text('position', '—'); this._text('driver', name);
+    this._text('lap', t('hud.lap', { lap: 1, total: NUM_LAPS }));
+    this._text('time', formatTime(0)); this._text('speed', '0');
+    this.turboTitle.textContent = t('hud.turbo'); this.turboCaption.textContent = t('hud.turboAvailable');
+    this.turbo.setAttribute('aria-disabled', 'true'); this.turbo.classList.remove('used', 'boosting');
+    this.nodes.get('lap').closest('.lap-pill').classList.remove('lap-changed');
+    this.segments.forEach((segment, i) => { segment.classList.remove('complete'); segment.classList.toggle('current', i === 0); });
+    if (this.id === 'hud') document.getElementById('raceAnnouncement').textContent = '';
+  }
   update(car, race) {
     if (this.lastCar !== car.participantId + ':' + car.id) { this.lastLap = null; this.lastCar = car.participantId + ':' + car.id; }
     this._text('position', ordinal(car.position));
