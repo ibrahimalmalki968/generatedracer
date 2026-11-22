@@ -6,14 +6,11 @@ The mobile interface now uses the Midnight Circuit design system: clear Solo/Mul
 
 **Arabic is the default. English is fully supported.** Use **العربية | English** at the top of any screen, including during a race. The choice is saved in this browser; switching updates text/direction immediately without reloading, reconnecting or changing the race. Track/steering directions stay the same. Nicknames, room codes and links remain readable. See [localization guide](docs/LOCALIZATION.md).
 
-Public testing: [open the temporary HTTPS game](https://brian-desired-theology-bath.trycloudflare.com/). This free Cloudflare Tunnel forwards to the production-mode Node server on the development computer. The computer must stay awake and both processes must remain running; the URL is not permanent cloud hosting. A dedicated Render free-service configuration is ready in `render.yaml`, pending hosting authorization. See [deployment status](docs/PUBLIC_DEPLOYMENT.md).
+[Play the current public build](https://consider-drawing-excerpt-mystery.trycloudflare.com/). The free Cloudflare Tunnel stays available while the host computer and its two processes are running. See the [gameplay report](docs/GAMEPLAY_OVERHAUL_REPORT.md).
 
 ## Play
 
-The engineering agent leaves the complete preview running at:
-
-- This computer: http://127.0.0.1:8081/
-- Current Wi-Fi address: http://192.168.100.206:8081/ (other devices must share the network; the address can change).
+For local development, the startup command below serves the game on port 8081 and prints the available addresses.
 
 Enter a nickname, then choose **Solo Race** or **Multiplayer**. Solo Race starts the countdown in one tap against five AI; its private session is created automatically. Results offer **Race again** for immediate replay or **Main menu** to choose a mode. Multiplayer opens the existing public/private room browser; with 2–6 humans, everyone presses Ready. Invitation links still open the invited lobby after nickname entry. Multiplayer rooms with one waiting human retain their explicit Start Race button.
 
@@ -21,7 +18,7 @@ Enter a nickname, then choose **Solo Race** or **Multiplayer**. Solo Race starts
 
 - Exactly 3 valid laps. No race time limit.
 - 1 human: 5 AI opponents. 2–6 humans: humans only; no AI fill.
-- One non-accumulating Turbo use per lap, maximum 3. Default boost: 2.5 seconds at 1.6x forward speed cap. No timed recharge or pickups.
+- One non-accumulating Turbo use per lap, maximum 3. Default boost: 1.75 seconds at 1.36x forward speed cap. No timed recharge or pickups.
 - No weapons. Normal collisions remain.
 - First finisher wins; remaining connected humans continue. Finished/disconnected cars cannot collide. Departures are DNF and never block results.
 - Final results are identical on every client. Multiplayer returns to the same lobby with everyone Waiting; solo offers one-tap Race again with fresh laps and Turbo. No automatic rematch.
@@ -42,11 +39,11 @@ No required environment variables. `HOST` defaults to `0.0.0.0`, `PORT` to `8081
 
 | Input | Driving | Turbo |
 | --- | --- | --- |
-| Phone | Hold steering, accelerator, brake/reverse buttons | Tap TURBO |
-| Keyboard | WASD or arrow keys | E or L |
-| Gamepad | Stick/D-pad, RT/LT | A |
+| Phone | Hold left/right to steer. Hold brake to slow down | Tap TURBO |
+| Keyboard | A/D or ←/→ to steer. S or ↓ to brake | E or L |
+| Gamepad | Stick/D-pad to steer, LT to brake | A |
 
-Brake overrides gas. Online blur/backgrounding releases controls and never pauses the room. The in-race menu explicitly says that racing continues. Every device has one player, one input handler and one full-screen racing view. The only modes are Solo Race (five AI opponents) and room-based online Multiplayer (2–6 humans on separate devices).
+Acceleration is automatic. Releasing the brake accelerates again. The brake stops the car without reversing. Online blur/backgrounding releases controls and never pauses the room. The in-race menu explicitly says that racing continues. Every device has one player, one input handler and one full-screen racing view. The only modes are Solo Race (five AI opponents) and room-based online Multiplayer (2–6 humans on separate devices).
 
 ## Verify and package
 

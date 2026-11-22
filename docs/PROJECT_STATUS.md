@@ -1,5 +1,7 @@
 # Project status — locally testable MVP complete
 
+**Current gameplay preview, 23 November 2026.** [Open GenerateRacer](https://consider-drawing-excerpt-mystery.trycloudflare.com/). The previous quick-tunnel hostname expired. The replacement serves the production build on loopback port 8086. See the [gameplay verification report](GAMEPLAY_OVERHAUL_REPORT.md). Earlier milestone records below refer to their original deployments.
+
 Current product update: **one player per device only**. Local shared-device mode, its entry/instructions, second HUD, extra input handlers, split-camera renderer and browser-local race/replay path have been removed. Solo remains one human + five AI; online Multiplayer remains 2–6 separate-device humans. Arabic defaults and live English/RTL/LTR remain intact. Shared authoritative simulation, physics, networking and room rules are preserved. See [removal report](ONE_PLAYER_PER_DEVICE.md). Verified: 75 automated tests, full Chrome/Edge gameplay regression 170 each, full public bilingual races 140 each, and UI/legacy/full-camera checks 155 in Chrome local and 155 in Edge public. Zero failures/skips/app errors. Production build/runtime and live asset equality passed. Detailed evidence is in ONE_PLAYER_PER_DEVICE.md and TEST_RESULTS.md.
 
 The UI transformation/localization details below are historical milestones; their preservation of a former local mode is superseded by this product decision.
