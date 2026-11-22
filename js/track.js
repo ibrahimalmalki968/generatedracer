@@ -5,30 +5,18 @@
  * Pre-computed SPLINE_POINTS are used for rendering and collision queries.
  */
 
-import { TRACK_WIDTH, TRACK_BORDER } from './constants.js';
+import { TRACK_WIDTH } from './constants.js';
 
 // ---------------------------------------------------------------------------
 // Control points (world space, 3000 × 2000)
 // Driving direction: clockwise.  Start/finish line: segment 0→1.
 // ---------------------------------------------------------------------------
 export const CONTROL_POINTS = [
-  { x: 1500, y: 300  },  //  0  start / finish
-  { x: 2200, y: 270  },  //  1  top-right straight
-  { x: 2680, y: 440  },  //  2  right-hairpin entry
-  { x: 2850, y: 800  },  //  3  right-hairpin apex
-  { x: 2720, y: 1150 },  //  4  right lower
-  { x: 2450, y: 1400 },  //  5  chicane right
-  { x: 2050, y: 1560 },  //  6  chicane left
-  { x: 1700, y: 1700 },  //  7  back straight
-  { x: 1500, y: 1750 },  //  8  bottom centre
-  { x: 1300, y: 1700 },  //  9  back straight left
-  { x:  950, y: 1560 },  // 10  left chicane
-  { x:  550, y: 1400 },  // 11  left turn
-  { x:  280, y: 1150 },  // 12  left lower
-  { x:  150, y:  800 },  // 13  left-hairpin apex
-  { x:  320, y:  440 },  // 14  left-hairpin exit
-  { x:  800, y:  270 },  // 15  top-left straight
-];
+  [1500,300], [2160,300], [2510,405], [2720,675], // Start straight into the fast eastern sweeper
+  [2640,960], [2300,1050], [2150,1285], [2400,1510], // Linked bends to the hairpin
+  [2270,1715], [1650,1680], [1000,1650], [610,1480], // Long passing straight
+  [360,1200], [540,910], [395,570], [705,305],
+].map(([x,y]) => ({x,y}));
 
 // ---------------------------------------------------------------------------
 // Catmull-Rom interpolation
@@ -72,7 +60,20 @@ function buildSpline() {
       out.push(catmullRom(p0, p1, p2, p3, j / SEGMENTS_PER_CP));
     }
   }
-  return out;
+  // Equal arc intervals make look-ahead distances and sector spacing independent of knot density.
+  const distances = [0];
+  for (let i = 0; i < out.length; i++) {
+    const a = out[i], b = out[(i + 1) % out.length];
+    distances.push(distances[i] + Math.hypot(b.x - a.x, b.y - a.y));
+  }
+  let edge = 0;
+  return out.map((_, i) => {
+    const distance = i * distances.at(-1) / out.length;
+    while (distances[edge + 1] < distance) edge++;
+    const a = out[edge], b = out[(edge + 1) % out.length];
+    const t = (distance - distances[edge]) / (distances[edge + 1] - distances[edge]);
+    return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+  });
 }
 
 export const SPLINE_POINTS = buildSpline();
@@ -118,11 +119,33 @@ export function nearestSplineIdx(x, y) {
   return best;
 }
 
+export const SEGMENTS = SPLINE_POINTS.map((p,i) => {
+  const q = SPLINE_POINTS[(i + 1) % SPLINE_POINTS.length];
+  const length = Math.hypot(q.x-p.x, q.y-p.y);
+  return { x:p.x, y:p.y, tx:(q.x-p.x)/length, ty:(q.y-p.y)/length, length };
+});
+
+// Choose the closest point on either adjacent segment, including the start seam.
+export function roadFrame(x,y) {
+  const i = nearestSplineIdx(x,y);
+  let best, bestD = Infinity;
+  for (const j of [(i + SEGMENTS.length - 1) % SEGMENTS.length, i]) {
+    const edge = SEGMENTS[j];
+    const along = Math.max(0, Math.min(edge.length, (x-edge.x)*edge.tx + (y-edge.y)*edge.ty));
+    const px = edge.x + along*edge.tx, py = edge.y + along*edge.ty;
+    const d = (x-px)**2 + (y-py)**2;
+    if (d < bestD) {
+      bestD = d;
+      best = {idx:j, x:px, y:py, tx:edge.tx, ty:edge.ty, offset:(y-py)*edge.tx-(x-px)*edge.ty};
+    }
+  }
+  return best;
+}
+
 /** Return the perpendicular distance from (x,y) to the nearest spline segment. */
 export function distToTrack(x, y) {
-  const idx = nearestSplineIdx(x, y);
-  const p   = SPLINE_POINTS[idx];
-  return Math.hypot(x - p.x, y - p.y);
+  const p = roadFrame(x,y);
+  return Math.hypot(x-p.x,y-p.y);
 }
 
 /** True if (x,y) is within the drivable surface. */
@@ -140,74 +163,62 @@ export function trackProgress(x, y) {
 }
 
 // ---------------------------------------------------------------------------
-// Drawing helpers
-// ---------------------------------------------------------------------------
-
-/** Draw a perpendicular line across the track at spline index `idx`. */
-function drawGate(ctx, idx, color, lineWidth) {
-  const n  = SPLINE_POINTS.length;
-  const p  = SPLINE_POINTS[idx];
-  const p2 = SPLINE_POINTS[(idx + 1) % n];
-
-  const dx  = p2.x - p.x;
-  const dy  = p2.y - p.y;
-  const len = Math.hypot(dx, dy) || 1;
-  const nx  = -dy / len;  // normal direction
-  const ny  =  dx / len;
-
-  const hw = TRACK_WIDTH / 2;
-
-  ctx.beginPath();
-  ctx.moveTo(p.x + nx * hw, p.y + ny * hw);
-  ctx.lineTo(p.x - nx * hw, p.y - ny * hw);
-  ctx.strokeStyle = color;
-  ctx.lineWidth   = lineWidth;
-  ctx.stroke();
-}
-
-/** Draw the full track onto `ctx` (called once or each frame). */
+// Rasterize once at world resolution. Only one transformed blit per animation frame.
+let artwork;
 export function drawTrack(ctx) {
-  const pts = SPLINE_POINTS;
-  const n   = pts.length;
-
-  // -- Grass background is drawn by main.js (fillRect with green) --
-
-  // Red/white curbs (slightly wider stroke)
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y);
-  ctx.closePath();
-  ctx.strokeStyle = '#cc2200';
-  ctx.lineWidth   = TRACK_WIDTH + TRACK_BORDER * 2;
-  ctx.lineJoin    = 'round';
-  ctx.lineCap     = 'round';
-  ctx.stroke();
-
-  // Road surface
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y);
-  ctx.closePath();
-  ctx.strokeStyle = '#4a4a4a';
-  ctx.lineWidth   = TRACK_WIDTH;
-  ctx.stroke();
-
-  // Centre dashed line
-  ctx.setLineDash([40, 30]);
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y);
-  ctx.closePath();
-  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-  ctx.lineWidth   = 3;
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Checkpoint markers (subtle yellow lines)
-  for (let k = 1; k < NUM_CHECKPOINTS; k++) {
-    drawGate(ctx, CHECKPOINT_INDICES[k], 'rgba(255,220,0,0.35)', 4);
+  if (!artwork) {
+    artwork = document.createElement('canvas');
+    artwork.width = 2250; artwork.height = 1500;
+    const g = artwork.getContext('2d');
+    g.scale(.75,.75);
+    g.fillStyle = '#456459'; g.fillRect(0,0,3000,2000);
+    const path = new Path2D();
+    path.moveTo(SEGMENTS[0].x, SEGMENTS[0].y);
+    for (const p of SEGMENTS) path.lineTo(p.x,p.y);
+    path.closePath(); g.lineJoin = 'round';
+    function stroke(width,color,dash=[]) {
+      g.lineWidth=width; g.strokeStyle=color; g.setLineDash(dash); g.stroke(path);
+    }
+    stroke(TRACK_WIDTH+74,'#557366');
+    stroke(TRACK_WIDTH+28,'#273a37');
+    stroke(TRACK_WIDTH+14,'#c9d6c8');
+    stroke(TRACK_WIDTH+10,'#273e40');
+    stroke(TRACK_WIDTH,'#e8e1cb');
+    stroke(TRACK_WIDTH,'#d7664a',[22,22]);
+    stroke(TRACK_WIDTH-17,'#edf1dd');
+    stroke(TRACK_WIDTH-22,'#414b52');
+    stroke(2,'#7c888b',[26,56]);
+    g.setLineDash([]);
+    // Outside approach boards count down to the three braking zones.
+    for (const knot of [4,7,12]) {
+      const corner = CONTROL_POINTS[knot];
+      const apex = nearestSplineIdx(corner.x,corner.y);
+      const entry = SEGMENTS[(apex-10+SEGMENTS.length)%SEGMENTS.length], exit = SEGMENTS[apex];
+      const outside = Math.sign(entry.ty*exit.tx-entry.tx*exit.ty);
+      for (let count=1;count<=3;count++) {
+        const p = SEGMENTS[(apex-count*4+SEGMENTS.length)%SEGMENTS.length];
+        const offset=outside*(TRACK_WIDTH/2+27);
+        g.save(); g.translate(p.x-p.ty*offset,p.y+p.tx*offset); g.rotate(Math.atan2(p.ty,p.tx));
+        g.fillStyle='#203139'; g.fillRect(-12,-8,24,16);
+        g.fillStyle='#f7d77d';
+        for(let stripe=0;stripe<count;stripe++) g.fillRect(-2-(count-1)*3+stripe*6,-5,3,10);
+        g.restore();
+      }
+    }
+    const start = SEGMENTS[0];
+    g.save(); g.translate(start.x,start.y); g.rotate(Math.atan2(start.ty,start.tx));
+    const tile = 12;
+    for(let lane=-9; lane<9; lane++) for(let row=0;row<2;row++) {
+      g.fillStyle = (lane+row)%2 ? '#f6f3df' : '#202a2f';
+      g.fillRect(row*tile,lane*tile,tile,tile);
+    }
+    g.strokeStyle='#acb8b6'; g.lineWidth=2;
+    for (let row=0; row<3; row++) for (const lane of [-32,35]) {
+      const x=-10-70*row;
+      g.beginPath();g.moveTo(x-36,lane-21);g.lineTo(x+16,lane-21);
+      g.lineTo(x+16,lane+21);g.lineTo(x-36,lane+21);g.stroke();
+    }
+    g.restore();
   }
-
-  // Start / finish line (white)
-  drawGate(ctx, CHECKPOINT_INDICES[0], '#ffffff', 6);
+  ctx.drawImage(artwork,0,0,3000,2000);
 }

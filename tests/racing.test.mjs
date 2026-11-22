@@ -125,7 +125,7 @@ test('fresh session resets laps, Turbo, clock and finish state', () => {
 });
 test('AI opponents physically drive three valid laps, without stopping an unfinished human', () => {
   const s = new LocalSession(); s.start();
-  for (let tick = 0; tick < 60 * 180; tick++) s.step(SIMULATION_STEP);
+  for (let tick = 0; tick < 60 * 180; tick++) s.step(SIMULATION_STEP, [{brake:1, steer:0, turbo:false}]);
   assert.ok(s.cars.slice(1).every(c => c.finished), JSON.stringify(s.cars.map(c => ({ id: c.id, lap: c.lap, x: c.x, y: c.y }))));
   assert.equal(s.race.finished, false); assert.notEqual(s.race.winnerId, null);
 });

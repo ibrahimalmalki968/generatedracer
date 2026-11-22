@@ -21,8 +21,8 @@ export class InputHandler {
   }
 
   _action(code) {
-    const wasd = { KeyA: 'left', KeyD: 'right', KeyW: 'gas', KeyS: 'brake', KeyE: 'turbo' };
-    const arrows = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'gas', ArrowDown: 'brake', KeyL: 'turbo' };
+    const wasd = { KeyA: 'left', KeyD: 'right', KeyS: 'brake', KeyE: 'turbo' };
+    const arrows = { ArrowLeft: 'left', ArrowRight: 'right', ArrowDown: 'brake', KeyL: 'turbo' };
     return wasd[code] || arrows[code];
   }
 
@@ -51,6 +51,14 @@ export class InputHandler {
       if (![...this._pointers.values()].some(p => p.el === el)) el.classList.remove('pressed');
     };
     for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) this._listen(el, event, release);
+    this._listen(el, 'pointermove', e => {
+      if (!this._pointers.has(e.pointerId)) return;
+      const rect = el.getBoundingClientRect();
+      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+        release(e);
+        if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+      }
+    });
     // Keyboard/assistive activation of the visible Turbo button.
     if (action === 'turbo') this._listen(el, 'click', e => {
       if (this.enabled && e.detail === 0) this._turboPending = true;
@@ -81,7 +89,6 @@ export class InputHandler {
     const axis = gp.axes[0] || 0;
     this._gamepad = {
       steer: pressed(14) ? -1 : pressed(15) ? 1 : Math.abs(axis) > 0.2 ? axis : 0,
-      gas: Math.max(gp.buttons[7]?.value || 0, pressed(12) ? 1 : 0),
       brake: Math.max(gp.buttons[6]?.value || 0, pressed(13) ? 1 : 0), turbo: pressed(0),
     };
     if (this._gamepad.turbo && !this._gamepadWasTurbo) this._turboPending = true;
@@ -95,7 +102,7 @@ export class InputHandler {
     const steer = actions.has('left') || actions.has('right')
       ? Number(actions.has('right')) - Number(actions.has('left')) : this._gamepad.steer || 0;
     const brake = Math.max(Number(actions.has('brake')), this._gamepad.brake || 0);
-    const result = { steer, gas: brake ? 0 : Math.max(Number(actions.has('gas')), this._gamepad.gas || 0),
+    const result = { steer, gas: brake ? 0 : 1,
       brake, turbo: actions.has('turbo') || Boolean(this._gamepad.turbo) || this._turboPending };
     this._turboPending = false;
     return result;

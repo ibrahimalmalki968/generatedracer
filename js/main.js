@@ -1,6 +1,7 @@
 /** Browser composition and renderer. Core physics and race rules live in simulation.js. */
 import { InputHandler } from './input.js';
 import { Hud } from './hud.js';
+import { follow, groundTransform } from './camera.js';
 import { drawTrack } from './track.js';
 import { formatTime } from './race.js';
 import { APP_VERSION, SIMULATION_STEP } from './constants.js';
@@ -29,9 +30,11 @@ let accumulator = 0;
 let lastTimestamp = null;
 let width = 0, height = 0, pixelRatio = 1;
 let camera = null;
+let hudSnapshot = null;
+let hudLanguage = null;
 let renderDirty = true;
 
-for (const [id, action] of [['btn-left', 'left'], ['btn-right', 'right'], ['btn-gas', 'gas'], ['btn-brake', 'brake']]) {
+for (const [id, action] of [['btn-left', 'left'], ['btn-right', 'right'], ['btn-brake', 'brake']]) {
   input.bindButton(document.getElementById(id), action);
 }
 input.bindButton(hud.turbo, 'turbo');
@@ -161,7 +164,10 @@ function onlineScene() {
   if (target) {
     if (!camera) camera = { x: target.x, y: target.y, carId: target.id };
     camera.carId = target.id;
-    hud.update(own, race);
+    if (hudSnapshot !== network.latest || hudLanguage !== getLanguage()) {
+      hudSnapshot = network.latest; hudLanguage = getLanguage();
+      hud.update(own, race);
+    }
   }
 }
 
@@ -203,7 +209,7 @@ network.addEventListener('disconnected', e => {
 function loop(ts) {
   const dt = lastTimestamp === null ? 0 : Math.min((ts - lastTimestamp) / 1000, 0.25);
   lastTimestamp = ts;
-  if (network.latest) onlineScene();
+  if (network.latest && state === 'racing') onlineScene();
   if (state === 'countdown') {
     showCountdown(Math.max(1, Math.ceil((network.room.startAt - Date.now() - network.offset) / 1000)));
   } else if (state === 'racing') {
@@ -223,44 +229,70 @@ function loop(ts) {
   requestAnimationFrame(loop);
 }
 
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+let sound;
+function unlockSound() {
+  const Audio = window.AudioContext || window.webkitAudioContext;
+  try {
+    if (Audio && !sound) sound = new Audio();
+    if (sound?.state === 'suspended') sound.resume().catch(() => {});
+  } catch { /* Audio is optional. */ }
+}
+window.addEventListener('pointerdown', unlockSound, { once: true });
+window.addEventListener('keydown', unlockSound, { once: true });
+function playImpact(strength) {
+  if (sound?.state !== 'running') return;
+  const tone = sound.createOscillator(), gain = sound.createGain(), now = sound.currentTime;
+  tone.frequency.setValueAtTime(118, now);
+  tone.frequency.exponentialRampToValueAtTime(42, now + .075);
+  gain.gain.setValueAtTime(.025 * strength, now);
+  gain.gain.exponentialRampToValueAtTime(.0001, now + .09);
+  tone.connect(gain).connect(sound.destination);
+  tone.start(now); tone.stop(now + .09);
+}
 function renderRace(camera, dt) {
   const car = session.cars.find(c => c.id === camera.carId);
-  const lerp = 1 - Math.exp(-8 * dt);
-  camera.x += (car.x - camera.x) * lerp;
-  camera.y += (car.y - camera.y) * lerp;
-  const scale = width < height ? width / 850 : height / 620;
+  follow(camera, car, width, height, dt);
+  const hit = network.latest?.cars[car.id];
+  const age = hit ? (network.latest.tick - hit.impactTick) / 60 + (performance.now() - network.latest.received) / 1000 : Infinity;
+  const amplitude = age >= 0 && age < .18 && !reducedMotion.matches ? hit.impact * (1 - age / .18) : 0;
+  if (hit?.impact > 0 && age < .18 && camera.lastImpact !== hit.impactTick) {
+    camera.lastImpact = hit.impactTick;
+    playImpact(hit.impact);
+  }
   ctx.save();
-  ctx.translate(width / 2, height / 2);
-  ctx.scale(scale, scale);
-  ctx.translate(-camera.x, -camera.y);
+  groundTransform(ctx, camera, width, height, amplitude ? Math.sin(age * 95) * amplitude : 0);
   drawTrack(ctx);
-  [...session.cars].sort((a, b) => a.y - b.y).forEach(c => {
-    c.draw(ctx);
-  });
-  // Separate close starting-grid labels instead of drawing names over one another.
-  const labels = [];
-  const labelSize = Math.max(18, 11 / scale);
-  ctx.fillStyle = '#fff'; ctx.font = `bold ${labelSize}px "Segoe UI", Tahoma, Arial, sans-serif`; ctx.textAlign = 'center'; ctx.direction = getLanguage() === 'ar' ? 'rtl' : 'ltr';
+  const matrix = ctx.getTransform();
   for (const c of session.cars) {
-    const name = displayNameOf(c);
-    const text = '\u2068' + name + '\u2069' + (c.finished ? ' ✓' : '');
-    const w = ctx.measureText(text).width + 8 / scale, h = labelSize + 5 / scale;
-    const x = c.x;
-    let y = c.y - 30;
-    while (labels.some(r => Math.abs(r.x - x) < (r.w + w) / 2 && Math.abs(r.y - y) < h)) y -= h;
+    if (!c.disconnected) c.draw(ctx, network.latest.tick - c.impactTick < 6 && !reducedMotion.matches);
+  }
+  ctx.restore();
+  ctx.save();
+  ctx.font = 'bold 12px "Segoe UI", Tahoma, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.direction = getLanguage() === 'ar' ? 'rtl' : 'ltr';
+  const labels = [];
+  for (const c of session.cars) {
+    if (c.disconnected) continue;
+    const x = (matrix.a * c.x + matrix.c * c.y + matrix.e) / pixelRatio;
+    let y = (matrix.b * c.x + matrix.d * c.y + matrix.f) / pixelRatio - 26 * camera.scale;
+    if (x < 0 || x > width || y < 0 || y > height) continue;
+    const label = displayNameOf(c) + (c.finished ? ' ✓' : '');
+    const w = Math.min(116, ctx.measureText(label).width) + 10;
+    while (labels.some(r => Math.abs(r.x - x) < (r.w + w) / 2 && Math.abs(r.y - y) < 17)) y -= 17;
     labels.push({ x, y, w });
-    if (y < c.y - 31) {
-      ctx.beginPath(); ctx.moveTo(c.x, c.y - 18); ctx.lineTo(x, y + 4 / scale);
-      ctx.strokeStyle = '#ffffff66'; ctx.lineWidth = 1 / scale; ctx.stroke();
-    }
-    ctx.fillText(text, x, y);
+    ctx.fillStyle = c.id === car.id ? '#dfff75' : '#142129df';
+    ctx.fillRect(x - w / 2, y - 12, w, 17);
+    ctx.fillStyle = c.id === car.id ? '#132120' : '#fff';
+    ctx.fillText(label, x, y, 116);
   }
   ctx.restore();
 }
 function render(dt) {
   if (!width || !height) return;
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-  ctx.fillStyle = '#285d24'; ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = '#456459'; ctx.fillRect(0, 0, width, height);
   if (session && camera) {
     renderRace(camera, dt);
   } else {

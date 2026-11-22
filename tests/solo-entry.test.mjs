@@ -28,12 +28,14 @@ test('one solo action creates a private locked session and starts the existing s
 test('solo replay validates race identity, resets laps/Turbo and reuses the same private room', async t => {
   const { s, player } = await setup(t); await player.request({ type: 'solo' }); s.game.step();
   const r = s.game.rooms.get(player.room().code), oldId = r.raceId;
+  const previousSkill = r.engine.ai[0].skill;
   const car = r.engine.cars[0]; car.turboUses = 3; car.turboAvailable = false;
   // Trusted gates isolate lifecycle; browser tests drive two full solo races physically.
   for (let lap = 0; lap < 3; lap++) for (const id of [1, 2, 3, 4, 5, 0]) {
     const g = GATES[id]; car.x = g.x - g.tx * 20; car.y = g.y - g.ty * 20; r.engine.race.update(SIMULATION_STEP);
     car.x = g.x + g.tx * 20; car.y = g.y + g.ty * 20; r.engine.race.update(SIMULATION_STEP);
   }
+  assert.ok(r.engine.ai.every(bot => bot.skill === previousSkill));
   s.game.step(); assert.equal(r.phase, 'results');
   assert.equal((await player.request({ type: 'solo', raceId: 'stale' })).type, 'error'); assert.equal(r.phase, 'results');
   assert.equal((await player.request({ type: 'solo', raceId: oldId })).type, 'ack');
@@ -41,6 +43,7 @@ test('solo replay validates race identity, resets laps/Turbo and reuses the same
   assert.equal((await player.request({ type: 'solo', raceId: oldId })).type, 'error');
   s.game.step();
   assert.equal(r.engine.cars[0].lap, 0); assert.equal(r.engine.cars[0].turboUses, 0); assert.equal(r.engine.cars[0].turboAvailable, true);
+  assert.ok(r.engine.ai.every(bot => bot.skill > previousSkill && bot.skill < 1));
   assert.equal(r.results, null); assert.equal(r.members.get(player.welcome.playerId).seq, 0);
 });
 test('cancel/leave removes quick solo; stale replay cannot create another room', async t => {

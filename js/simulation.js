@@ -1,9 +1,8 @@
 /** Shared room simulation, independent of browser rendering and input devices. */
-import { Car, resolveCarCollision } from './car.js';
+import { Car, resolveCarCollision, containCar } from './car.js';
 import { AiController } from './ai.js';
 import { RaceManager } from './race.js';
 import { NUM_AI } from './constants.js';
-import { trackProgress } from './track.js';
 import { translate } from '../shared/translations.js';
 
 export const START_POSITIONS = [
@@ -13,7 +12,7 @@ export const START_POSITIONS = [
 ];
 
 export class LocalSession {
-  constructor(humans = 1) {
+  constructor(humans = 1, skill = .36) {
     if (!Number.isInteger(humans) || humans < 1 || humans > 6) throw new RangeError('Races support one to six humans.');
     this.humans = humans;
     // Solo has five AI; online races with 2–6 humans never fill empty slots with AI.
@@ -26,7 +25,7 @@ export class LocalSession {
       car.nameKey = nameKey; car.nameParams = nameParams;
       return car;
     });
-    this.ai = this.cars.filter(c => !c.isHuman).map(c => new AiController(c));
+    this.ai = this.cars.filter(c => !c.isHuman).map(c => new AiController(c, skill));
     this.race = new RaceManager(this.cars);
   }
 
@@ -36,12 +35,17 @@ export class LocalSession {
     this.cars.filter(c => c.isHuman).forEach(c => {
       c.input = inputs[c.id] || { gas: 0, brake: 0, steer: 0, turbo: false };
     });
-    const player = this.cars[0];
-    const progress = player.lap + trackProgress(player.x, player.y);
-    this.ai.forEach(ai => ai.update(dt, progress));
+    this.ai.forEach(ai => ai.update(dt, this.cars));
     this.cars.forEach(c => c.update(dt));
-    for (let a = 0; a < this.cars.length; a++) {
-      for (let b = a + 1; b < this.cars.length; b++) resolveCarCollision(this.cars[a], this.cars[b]);
+    for (let iteration = 0; iteration < 4; iteration++) {
+      let touched = false;
+      for (let a = 0; a < this.cars.length; a++) {
+        for (let b = a + 1; b < this.cars.length; b++) {
+          if (resolveCarCollision(this.cars[a], this.cars[b])) touched = true;
+        }
+      }
+      if (!touched) break;
+      for (const c of this.cars) if (!c.finished && !c.disconnected) containCar(c);
     }
     this.race.update(dt);
   }

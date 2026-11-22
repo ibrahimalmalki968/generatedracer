@@ -9,7 +9,7 @@ test('browser offers one HUD/input/camera and only server-backed race entry', as
   assert.equal((html.match(/class="hud hidden"/g) || []).length, 1);
   assert.doesNotMatch(html + css + main, /splitscreen|split-hint|hud2|inputP[12]|control\.splitKeys|local\.title/i);
   assert.doesNotMatch(main, /LocalSession|activeInputs|cameras|session\.humans|viewWidth/);
-  assert.match(main, /ctx\.translate\(width \/ 2, height \/ 2\)/);
+  assert.match(await source('js/camera.js'), /ctx\.translate\(width \/ 2, height \/ 2\)/);
   assert.match(main, /const input = new InputHandler\(\)/);
   assert.doesNotMatch(input, /keySet/);
   for (const locale of ['ar', 'en']) {

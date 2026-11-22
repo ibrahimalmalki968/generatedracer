@@ -119,15 +119,15 @@ try {
   check((await host.locator('#hud-lap').textContent()).includes('\u20661 / 3\u2069'), 'Arabic HUD isolates 1 / 3 as an LTR numeric fraction');
   for (const viewport of [{ width: 320, height: 568 }, { width: 360, height: 640 }, { width: 390, height: 844 }, { width: 412, height: 915 }, { width: 844, height: 390 }]) {
     await host.setViewportSize(viewport); await layout(host, 'ar', 'Arabic racing ' + viewport.width + 'x' + viewport.height);
-    const controls = await host.evaluate(() => ['btn-left', 'btn-right', 'btn-brake', 'btn-gas', 'hud-turbo', 'btn-pause'].map(id => {
+    const controls = await host.evaluate(() => ['btn-left', 'btn-right', 'btn-brake', 'hud-turbo', 'btn-pause'].map(id => {
       const el = document.getElementById(id), r = el.getBoundingClientRect();
       return { id, x: r.x, y: r.y, w: r.width, h: r.height, hit: document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('button')?.id };
     }));
     check(controls.every(r => r.x >= 0 && r.y >= 0 && r.x + r.w <= viewport.width + .1 && r.y + r.h <= viewport.height + .1 && r.h >= 44 && r.hit === r.id), 'Arabic driving/HUD targets fit and respond, clear of switcher at ' + viewport.width + 'x' + viewport.height);
   }
   await host.setViewportSize({ width: 390, height: 844 });
-  const directions = await host.evaluate(() => ['btn-left', 'btn-right', 'btn-brake', 'btn-gas'].map(id => document.getElementById(id).getBoundingClientRect().x));
-  check(directions[0] < directions[1] && directions[2] < directions[3], 'Arabic keeps physical left/right steering and brake/gas order');
+  const directions = await host.evaluate(() => ['btn-left', 'btn-right', 'btn-brake'].map(id => document.getElementById(id).getBoundingClientRect().x));
+  check(directions[0] < directions[1] && directions[1] < directions[2], 'Arabic keeps physical left/right steering and right-hand braking');
   await host.evaluate(() => { window.originalSocket = qaNet.socket; window.originalRace = qaNet.room.raceId; window.originalPlayer = qaNet.playerId; window.beforeCommands = qaCommands.length; window.pageOrigin = performance.timeOrigin; });
   // Viewport/other-page checks can leave this page unfocused; the game correctly
   // releases held keys on blur. Acquire actual focus before testing held keys.
@@ -137,7 +137,8 @@ try {
   await host.keyboard.down('ArrowUp'); await host.keyboard.down('ArrowLeft');
   await host.waitForFunction(() => qaNet.latest?.cars.find(c => c.participantId === qaNet.playerId)?.speed > 20); await switchTo(host, 'en'); await switchTo(host, 'ar');
   check(await host.evaluate(() => qaNet.socket === originalSocket && qaNet.room.raceId === originalRace && qaNet.playerId === originalPlayer && qaCommands.length === beforeCommands && performance.timeOrigin === pageOrigin), 'Live language switching sends no commands, reload or reconnection and retains car ownership');
-  check(await host.evaluate(() => { const c = qaNet.latest.cars.find(c => c.participantId === qaNet.playerId); return c.speed > 20 && c.angle < 0; }), 'Held acceleration and left steering continue across language changes');
+  await host.waitForFunction(() => qaNet.latest.cars.find(c => c.participantId === qaNet.playerId)?.rack < -.1);
+  check(await host.evaluate(() => qaNet.latest.cars.find(c => c.participantId === qaNet.playerId).rack < -.1), 'Held acceleration and left steering continue across language changes');
   await host.keyboard.up('ArrowLeft'); await host.keyboard.up('ArrowUp'); await host.locator('#hud-turbo').click();
   await host.waitForFunction(() => qaNet.latest.cars.find(c => c.participantId === qaNet.playerId).turboUses === 1);
   check((await host.locator('#hud-turbo').textContent()).includes('اللفة'), 'Turbo indicator stays localized after authoritative activation');

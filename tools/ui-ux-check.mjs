@@ -134,7 +134,7 @@ try {
     for (const size of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
       await host.setViewportSize(size);
       await singleDeviceView(host, check, lang + ' ' + size.width);
-      const targets = await host.evaluate(() => ['btn-left', 'btn-right', 'btn-brake', 'btn-gas', 'hud-turbo', 'btn-pause'].map(id => {
+      const targets = await host.evaluate(() => ['btn-left', 'btn-right', 'btn-brake', 'hud-turbo', 'btn-pause'].map(id => {
         const e = document.getElementById(id), r = e.getBoundingClientRect(); return { id, h: r.height, w: r.width, hit: document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('button')?.id };
       }));
       check(targets.every(t => t.h >= 44 && t.w >= 44 && t.hit === t.id), `${lang} ${size.width}: all physical controls hit safely`);

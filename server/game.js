@@ -5,6 +5,7 @@ import { SIMULATION_STEP } from '../js/constants.js';
 import { controls, displayName, MAX_HUMANS, NEUTRAL, PROTOCOL_VERSION } from '../shared/protocol.js';
 
 const token = () => randomBytes(32).toString('base64url');
+const tenth = value => Math.round(value * 10) / 10;
 const code = () => randomBytes(5).toString('hex').toUpperCase();
 
 /** All mutable racing state is owned by a room, never a browser or a global car array. */
@@ -137,7 +138,7 @@ export class Game {
   begin(r) {
     if (r.phase !== 'countdown' || r.revision !== r.startRevision || !r.members.size ||
         (r.members.size > 1 && ![...r.members.values()].every(m => m.ready))) return;
-    r.engine = new LocalSession(r.members.size); r.tick = 0;
+    r.engine = new LocalSession(r.members.size, r.members.values().next().value.session.drivingSkill); r.tick = 0;
     [...r.members.values()].forEach((m, i) => {
       m.carId = i; m.seq = 0; m.appliedSeq = 0; m.boost = 0; m.pendingBoost = null; m.input = NEUTRAL; m.receivedAt = 0;
       r.engine.cars[i].name = m.session.name; r.engine.cars[i].nameKey = null; r.engine.cars[i].participantId = m.session.id;
@@ -188,6 +189,14 @@ export class Game {
     r.results = Object.freeze(r.engine.race.getResults().map(result => Object.freeze({ ...result,
       position: result.status === 'disconnected' ? null : result.position,
     })));
+    if (r.engine.humans === 1) {
+      const driver = r.results.find(c => c.isHuman && c.finished);
+      const session = r.members.values().next().value?.session;
+      if (driver && session) {
+        const performance = (6-driver.position)/5;
+        session.drivingSkill = .72*(session.drivingSkill ?? .36) + .28*performance;
+      }
+    }
     this.publish(r); this.publicLists();
   }
 
@@ -223,7 +232,9 @@ export class Game {
     return { type: 'snapshot', roomCode: r.code, raceId: r.raceId, tick: r.tick, serverNow: Date.now(),
       elapsed: r.engine.race.elapsed, winnerId: r.engine.race.winnerId,
       cars: r.engine.cars.map(c => ({ id: c.id, name: c.name, nameKey: c.nameKey, nameParams: c.nameParams, participantId: c.participantId || null, isHuman: c.isHuman,
-        x: c.x, y: c.y, angle: c.angle, speed: c.speed, lap: c.lap, position: c.position,
+        x: tenth(c.x), y: tenth(c.y), angle: Math.round(c.angle*10000)/10000, speed: tenth(c.speed),
+        vx: tenth(c.vx), vy: tenth(c.vy), rack: Math.round(c.rack*1000)/1000,
+        impactTick: c.impactTick, impact: tenth(c.impact), lap: c.lap, position: c.position,
         turboActive: c.turboActive, turboAvailable: c.turboAvailable, turboTimer: c.turboTimer, turboUses: c.turboUses,
         finished: c.finished, disconnected: c.disconnected, bestLap: r.engine.race.getBestLap(c.id), finishTime: r.engine.race.getFinishTime(c.id),
         ack: memberById.get(c.id)?.appliedSeq || 0,

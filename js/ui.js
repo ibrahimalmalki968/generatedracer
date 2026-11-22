@@ -4,7 +4,6 @@ const paths = {
   racers: '<path d="m3 14 2-5h9l2 5v5H3zm2 0h9M6 19v2m7-2v2m-5-12 2-5h9l2 5v6h-3m-6-6h8"/><path d="M6 16h1m5 0h1m4-5h1"/>',
   left: '<path d="m14 5-7 7 7 7M7 12h12"/>',
   right: '<path d="m10 5 7 7-7 7m7-7H5"/>',
-  gas: '<path d="m6 11 6-6 6 6m-6-6v15m-6-6 6-6 6 6"/>',
   brake: '<path d="M5 5h14M6 12l6 6 6-6M12 7v11"/>',
   pause: '<path d="M8 5v14M16 5v14"/>',
   check: '<path d="m5 12 4 4L19 6"/>',

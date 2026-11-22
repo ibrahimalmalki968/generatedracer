@@ -150,7 +150,6 @@ button.pressed { background: #e9ffb6; color: var(--ink); border-color: var(--acc
 .touch-btn { width: clamp(56px, 16vw, 72px); height: clamp(60px, 17vw, 76px); border: 1px solid #9baec7; border-radius: 16px; background: #101b2bed; color: var(--text); pointer-events: auto; touch-action: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-shadow: 0 3px 0 #0007; }
 .touch-btn .icon { width: 28px; height: 28px; stroke-width: 2.4; }
 .touch-btn small { font-size: 10px; line-height: 1.3; }
-.touch-btn.gas { background: var(--accent); color: var(--ink); border-color: var(--accent); }
 .touch-btn.brake { background: #3c252bf2; color: #ffd1ca; border-color: #cf8b86; }
 #keyHint { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--text); background: #0b1018ed; padding: 8px 12px; border-radius: 8px; pointer-events: none; max-width: 70%; text-align: center; }
 #countdown { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; background: #0b101830; }
@@ -334,3 +333,21 @@ footer a { min-height: 44px; display: flex; align-items: center; }
 }
 
 body:not([data-screen='racing']):not([data-screen='countdown']) #raceAnnouncement { display: none; }
+
+/* Physical thumb zones stay in place in both languages. */
+@media (any-pointer: coarse) and (min-width: 540px) {
+  .touch-side { gap: 12px; }
+  .touch-btn { width: 68px; height: 62px; }
+  #btn-brake { margin-right: 115px; }
+  .turbo-btn { width: 102px; min-height: 62px; bottom: max(20px, env(safe-area-inset-bottom)); }
+}
+@media (max-height: 440px) and (min-width: 560px) {
+  body:is([data-screen='racing'],[data-screen='countdown'])::before,
+  body:is([data-screen='racing'],[data-screen='countdown']) .app-masthead { display: none; }
+  .hud-top { position: absolute; left: max(8px,env(safe-area-inset-left)); top: max(6px,env(safe-area-inset-top)); padding: 0; width: min(34vw,300px); gap: 4px; }
+  .hud-pill { padding: 2px 4px; }
+  .race-identity { top: calc(63px + env(safe-area-inset-top)); }
+  .turbo-btn { bottom: max(12px,env(safe-area-inset-bottom)); }
+  #raceToolbar { top: calc(52px + env(safe-area-inset-top)); }
+  #raceStatus { top: 8px; left: 35%; right: 165px; }
+}

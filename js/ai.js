@@ -1,20 +1,65 @@
-/** Spline-following AI, using the existing proportional steering and speed factors. */
-import { SPLINE_POINTS, nearestSplineIdx, trackProgress } from './track.js';
-import { AI_LOOK_AHEAD, AI_STEER_GAIN, AI_SPEED_FACTORS, MAX_SPEED } from './constants.js';
+import { SEGMENTS, roadFrame } from './track.js';
+import { MAX_SPEED } from './constants.js';
+
+const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
+const ahead = (idx,steps) => SEGMENTS[(idx+steps) % SEGMENTS.length];
+const bend = (a,b) => Math.atan2(a.tx*b.ty-a.ty*b.tx,a.tx*b.tx+a.ty*b.ty);
+
 export class AiController {
-  constructor(car) { this.car = car; this._speedFactor = AI_SPEED_FACTORS[car.id] ?? 0.88; }
-  update(_dt, playerProgress) {
-    const car = this.car;
-    if (car.isHuman || car.finished || car.disconnected) return;
-    const idx = nearestSplineIdx(car.x, car.y);
-    const target = SPLINE_POINTS[(idx + AI_LOOK_AHEAD) % SPLINE_POINTS.length];
-    let err = Math.atan2(target.y - car.y, target.x - car.x) - car.angle;
-    err = Math.atan2(Math.sin(err), Math.cos(err));
-    const ownProgress = car.lap + trackProgress(car.x, car.y);
-    const rubberBand = playerProgress === undefined ? 1 : Math.max(0.85, Math.min(1.1, 1 - (ownProgress - playerProgress) * 0.1));
-    const targetSpeed = MAX_SPEED * this._speedFactor * rubberBand * (Math.abs(err) > 0.65 ? 0.72 : 1);
-    const brake = car.speed > targetSpeed + 30 ? 0.4 : 0;
-    car.input = { steer: Math.max(-1, Math.min(1, err * AI_STEER_GAIN)), gas: !brake && car.speed < targetSpeed ? 1 : 0,
-      brake, turbo: car.turboAvailable && Math.abs(err) < 0.12 && car.speed > MAX_SPEED * 0.8 };
+  constructor(car, skill = .36) {
+    this.car = car;
+    this.skill = clamp(skill,0,1);
+    this.lane = (car.id % 2 ? 1 : -1) * (12 + car.id*3);
+    this.passSide = 0;
+  }
+
+  update(dt, traffic = []) {
+    const c = this.car;
+    if (c.isHuman || c.finished || c.disconnected) return;
+    const road = roadFrame(c.x,c.y);
+    const look = clamp(Math.round(3 + c.speed / 110),3,10);
+    const target = ahead(road.idx,look);
+    const entry = ahead(road.idx,3), exit = ahead(road.idx,14);
+    const curve = bend(entry,exit);
+    const crest = Math.max(Math.abs(bend(road,entry)), Math.abs(bend(entry,ahead(road.idx,9))), Math.abs(bend(ahead(road.idx,9),exit)));
+    // Turn in toward the apex. Drivers differ in line and timing, within the same tire limits.
+    const bias = (c.id % 2 ? 1 : -1) * (9 + c.id*2);
+    const timing = Math.sin((road.idx + c.id*31) * .065) * (1-this.skill);
+    let laneGoal = bias + clamp(curve*38,-40,40) + timing*11;
+    let trafficBrake = 0, blocked = false, pursued = false;
+    let obstacle = null, nearest = Infinity, leftClear = true, rightClear = true;
+    for (const rival of Array.isArray(traffic) ? traffic : []) {
+      if (rival === c || rival.finished || rival.disconnected) continue;
+      const dx=rival.x-c.x, dy=rival.y-c.y;
+      const forward=dx*road.tx + dy*road.ty, lateral=dy*road.tx-dx*road.ty;
+      if (forward < -35 && forward > -125 && Math.abs(lateral)<35) pursued=true;
+      if (forward < -55 || forward > 170) continue;
+      if (lateral < -12 && lateral > -76) leftClear=false;
+      if (lateral > 12 && lateral < 76) rightClear=false;
+      if (forward > 0 && forward < nearest && Math.abs(lateral)<40) {
+        obstacle = road.offset+lateral; nearest=forward;
+      }
+    }
+    if (pursued && Math.abs(curve) > .27) laneGoal += Math.sign(curve)*12;
+    if (obstacle !== null) {
+      blocked=true;
+      if (!this.passSide) this.passSide = obstacle > 0 ? -1 : 1;
+      if (!leftClear && rightClear) this.passSide=1;
+      if (!rightClear && leftClear) this.passSide=-1;
+      laneGoal = obstacle + this.passSide*53;
+      if (!leftClear && !rightClear && nearest<78) trafficBrake=.68;
+    } else this.passSide=0;
+    this.lane += (clamp(laneGoal,-70,70)-this.lane)*(1-Math.exp(-5*dt));
+    const tx=target.x-target.ty*this.lane, ty=target.y+target.tx*this.lane;
+    const desired=Math.atan2(ty-c.y,tx-c.x);
+    const error=Math.atan2(Math.sin(desired-c.angle),Math.cos(desired-c.angle));
+    const steer=clamp(error*(2.8+this.skill*.65),-1,1);
+    const precision=.69+this.skill*.23+c.id*.008;
+    const targetSpeed=MAX_SPEED*clamp(precision+.06-crest*.32-Math.abs(error)*.06+timing*.025,.43,1);
+    const brake=Math.max(trafficBrake,clamp((c.speed-targetSpeed)/95,0,1));
+    c.input={steer, gas: brake ? 0 : 1, brake,
+      turbo:c.turboAvailable && !blocked && crest<.18 && Math.abs(error)<.15 && c.speed>265};
+    // Commit to the boost on open exits. Brake normally if a tighter corner or traffic appears.
+    if (c.turboActive && !blocked && crest<.25 && Math.abs(error)<.35) c.input.brake=0;
   }
 }

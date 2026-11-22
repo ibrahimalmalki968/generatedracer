@@ -77,7 +77,7 @@ try {
     for (const [i, p] of racers.entries()) await singleDeviceView(p, check, 'Six-human device ' + (i + 1));
     for (const viewport of [{ width: 320, height: 568 }, { width: 360, height: 640 }, { width: 390, height: 844 }, { width: 412, height: 915 }, { width: 844, height: 390 }]) {
       await host.setViewportSize(viewport); await host.waitForTimeout(70);
-      const layout = await host.evaluate(() => ['hud-position', 'hud-lap', 'hud-speed', 'hud-time', 'hud-turbo', 'btn-left', 'btn-right', 'btn-gas', 'btn-brake', 'btn-pause'].map(id => {
+      const layout = await host.evaluate(() => ['hud-position', 'hud-lap', 'hud-speed', 'hud-time', 'hud-turbo', 'btn-left', 'btn-right', 'btn-brake', 'btn-pause'].map(id => {
         const el = document.getElementById(id), r = el.getBoundingClientRect();
         return { id, x: r.x, y: r.y, w: r.width, h: r.height,
           hit: document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('button')?.id };
@@ -97,20 +97,24 @@ try {
         }
         return original.call(this, text, x, y, ...rest);
       };
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      CanvasRenderingContext2D.prototype.fillText = original;
-      const last = boxes.slice(-6);
-      return last.length === 6 && last.every((r, i) => last.every((s, j) => i === j || r.x + r.w <= s.x || s.x + s.w <= r.x || r.y + r.h <= s.y || s.y + s.h <= r.y));
+      try {
+        await new Promise(resolve => requestAnimationFrame(() => {
+          boxes.length = 0;
+          requestAnimationFrame(resolve);
+        }));
+      } finally { CanvasRenderingContext2D.prototype.fillText = original; }
+      const last = boxes;
+      return last.length >= 1 && last.every((r, i) => last.every((s, j) => i === j || r.x + r.w <= s.x || s.x + s.w <= r.x || r.y + r.h <= s.y || s.y + s.h <= r.y));
     });
-    check(separated, 'Six starting-grid nicknames do not overlap');
+    check(separated, 'Visible nearby nicknames do not overlap');
     const cdp = await host.context().newCDPSession(host);
     const point = async id => { const b = await host.locator(id).boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
-    const gas = await point('#btn-gas'), left = await point('#btn-left'), turbo = await point('#hud-turbo');
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...gas, id: 1 }, { ...left, id: 2 }, { ...turbo, id: 3 }] });
+    const left = await point('#btn-left'), turbo = await point('#hud-turbo');
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...left, id: 2 }, { ...turbo, id: 3 }] });
     await host.waitForTimeout(700);
     await host.waitForFunction(() => window.testNet?.latest?.cars.find(c => c.participantId === testNet.playerId)?.turboUses === 1, null, { timeout: 15000 });
     check(await host.evaluate(() => testNet.latest.cars.find(c => c.participantId === testNet.playerId).turboUses === 1), 'Touch Turbo is authoritative');
-    check(await host.evaluate(() => testNet.predicted.speed > 0), 'Touch acceleration and steering drive predicted car');
+    check(await host.evaluate(() => testNet.predicted.speed > 0), 'Automatic acceleration and touch steering drive predicted car');
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await host.setViewportSize({ width: 844, height: 390 }); await host.waitForTimeout(100);
     check(await host.evaluate(() => testNet.pending.length <= 120), 'Prediction history bounded after orientation change');

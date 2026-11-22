@@ -100,7 +100,7 @@ export const rematchJourney = async (page, baseUrl, evidenceDir) => {
           const c = this.predicted || this.latest?.cars.find(c => c.participantId === this.playerId);
           if (window.drive && c && !c.finished) {
             const ghost = new Car(c.id, c.x, c.y, c.angle, { isHuman: false }); Object.assign(ghost, { speed: c.speed, lap: c.lap, turboAvailable: c.turboAvailable });
-            const driver = new AiController(ghost); if (window.factor) driver._speedFactor = window.factor;
+            const driver = new AiController(ghost);
             driver.update(1 / 60); input = ghost.input;
           }
           return predict.call(this, input);

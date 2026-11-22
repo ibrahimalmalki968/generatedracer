@@ -7,7 +7,7 @@ export const WORLD_W = 3000;
 export const WORLD_H = 2000;
 
 // Track
-export const TRACK_WIDTH = 200;  // road width in world pixels
+export const TRACK_WIDTH = 232;  // road width in world pixels
 export const TRACK_BORDER = 18;  // curb width each side
 
 // Car dimensions (length × width when facing right)
@@ -33,30 +33,13 @@ export const ORDINALS  = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 
 // Physics (world-pixels / second)
 export const MAX_SPEED         = 520;
-export const MAX_REVERSE_SPEED = 160;
-export const ACCELERATION      = 380;
-export const BRAKING           = 560;
-export const COAST_FRICTION    = 90;
-export const TURN_RATE         = 2.6;   // rad/s at full speed
-
-// Traction multipliers
-export const OFFTRACK_SPEED_CAP     = 0.55;  // fraction of MAX_SPEED when on grass
-export const OFFTRACK_FRICTION_MULT = 3.5;   // extra friction multiplier on grass
-
-// AI
-export const AI_LOOK_AHEAD  = 12;  // spline samples ahead to target
-export const AI_STEER_GAIN  = 2.5; // proportional steering gain
-// Per-AI speed fractions (index 0 unused – that is the player)
-export const AI_SPEED_FACTORS = [1, 0.88, 0.91, 0.93, 0.86, 0.89];
-
-// Camera
-export const CAM_LERP        = 0.10;  // smoothing (0 = locked, 1 = instant)
-export const VIEWPORT_WORLD_W = 1100; // world units visible horizontally
-export const VIEWPORT_WORLD_H = 750;  // world units visible vertically
+export const ACCELERATION = 425;
+export const BRAKING = 830;
+export const TURN_RATE = 3.5;
 
 // Turbo boost
-export const TURBO_DURATION   = 2.5;  // seconds active
-export const TURBO_SPEED_MULT = 1.6;  // speed multiplier when boosting
+export const TURBO_DURATION   = 1.75; // seconds active
+export const TURBO_SPEED_MULT = 1.36; // speed multiplier when boosting
 // One use is granted at the start of each of the three laps, never by a timer.
 export const SIMULATION_STEP = 1 / 60;
 

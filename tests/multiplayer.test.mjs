@@ -44,7 +44,8 @@ test('concurrent rooms are isolated; stale race packets cannot affect another se
   const before = br.engine.cars[0].x;
   a.clients[0].send({ type: 'input', raceId: br.raceId, seq: 1, boost: 1, gas: 1, brake: 0, steer: 0 });
   await new Promise(r => setTimeout(r, 100));
-  assert.equal(ar.engine.cars[0].turboUses, 0); assert.equal(br.engine.cars[0].x, before);
+  assert.equal(ar.engine.cars[0].turboUses, 0); assert.ok(br.engine.cars[0].x > before); assert.equal(br.engine.cars[0].turboUses, 0);
+  assert.equal(br.members.values().next().value.seq, 0);
   assert.notEqual(ar.engine.race, br.engine.race);
 });
 

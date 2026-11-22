@@ -4,11 +4,16 @@ import { Car } from './car.js';
 import { SIMULATION_STEP } from './constants.js';
 import { PROTOCOL_VERSION } from '../shared/protocol.js';
 
+// An acknowledgement gap is not permission to simulate a seconds-long lead through other cars.
+const REPLAY_TICKS = 8;
+const MAX_LEAD_TICKS = 12;
+
 export class Network extends EventTarget {
   constructor() {
     super();
     this.socket = null; this.playerId = null; this.room = null; this.latest = null;
-    this.previous = null; this.predicted = null; this.pending = []; this.seq = 0; this.boost = 0;
+    this.history = []; this.drawTick = -1; this.correction = null;
+    this.predicted = null; this.pending = []; this.seq = 0; this.boost = 0;
     this.boostHeld = false; this.offset = 0; this.requests = new Map(); this.requestId = 0;
     this.reconnectTimer = null; this.retry = 0; this.stopped = false; this.ready = false;
     try { this.token = sessionStorage.getItem('racer-session'); } catch { this.token = null; }
@@ -78,19 +83,34 @@ export class Network extends EventTarget {
     });
   }
   resetRace() {
-    this.latest = null; this.previous = null; this.predicted = null; this.pending = [];
+    this.history = []; this.drawTick = -1; this.correction = null;
+    this.latest = null; this.predicted = null; this.pending = [];
     this.seq = 0; this.boost = 0; this.boostHeld = false;
   }
   apply(snapshot) {
     if (!this.room || snapshot.roomCode !== this.room.code || snapshot.raceId !== this.room.raceId ||
         (this.latest && snapshot.tick < this.latest.tick)) return;
-    this.previous = this.latest; this.latest = { ...snapshot, received: performance.now() };
+    this.latest = { ...snapshot, received: performance.now() };
+    if (this.history.at(-1)?.tick !== snapshot.tick) {
+      this.history.push(this.latest);
+      if (this.history.length > 10) this.history.shift();
+    }
     const own = snapshot.cars.find(c => c.participantId === this.playerId);
     if (own) {
       if (!this.predicted || this.predicted.id !== own.id) this.predicted = new Car(own.id, own.x, own.y, own.angle);
-      Object.assign(this.predicted, own); this.predicted._turboHeld = false;
+      const old = this.predicted;
+      const decay = this.correction ? Math.exp(-(performance.now()-this.correction.at)/65) : 0;
+      const x = old.x + (this.correction?.x || 0)*decay, y = old.y + (this.correction?.y || 0)*decay;
+      Object.assign(this.predicted, own, { tick: snapshot.tick }); this.predicted._turboHeld = false;
       this.pending = this.pending.filter(p => p.seq > own.ack).slice(-120);
-      for (const p of this.pending) { this.predicted.input = p.input; this.predicted.update(SIMULATION_STEP); }
+      // Server consumes the latest controls per tick. After a burst, replay only a short
+      // recent window and let the next authoritative snapshot confirm any skipped contacts.
+      for (const p of this.pending.slice(-REPLAY_TICKS)) {
+        this.predicted.input = p.input;
+        this.predicted.update(SIMULATION_STEP);
+      }
+      const dx = x-old.x, dy = y-old.y;
+      this.correction = Math.hypot(dx,dy) < 90 && !own.finished ? {x:dx,y:dy,at:performance.now()} : null;
     }
     this.emit('snapshot', this.latest);
   }
@@ -103,21 +123,27 @@ export class Network extends EventTarget {
     const local = { ...input, turbo: Boolean(pulse) };
     if (this.send({ type: 'input', raceId: this.room.raceId, seq, boost: this.boost,
       steer: input.steer, gas: input.gas, brake: input.brake })) {
-      this.pending.push({ seq, input: local }); this.pending = this.pending.slice(-120);
-      this.predicted.input = local; this.predicted.update(SIMULATION_STEP);
+      this.pending.push({ seq, input: local }); if (this.pending.length > 120) this.pending.shift();
+      this.predicted.input = local;
+      if (this.predicted.tick - this.latest.tick < MAX_LEAD_TICKS) this.predicted.update(SIMULATION_STEP);
     }
   }
   displayCars() {
     if (!this.latest) return [];
     const age = performance.now() - this.latest.received;
-    const alpha = Math.max(0, Math.min(1, age / 50));
-    return this.latest.cars.map(car => {
-      if (car.participantId === this.playerId && this.predicted) return { ...car, x: this.predicted.x, y: this.predicted.y,
-        angle: this.predicted.angle, speed: this.predicted.speed }; // status remains authoritative
-      const before = this.previous?.cars.find(c => c.id === car.id);
-      if (!before) return car;
+    // Render a short distance behind authority. Interpolate by simulation time, even with packet jitter.
+    this.drawTick = Math.max(this.drawTick, Math.min(this.latest.tick, this.latest.tick - 5 + age*.06));
+    const after = this.history.find(s => s.tick >= this.drawTick) || this.latest;
+    const beforeSnap = this.history[Math.max(0,this.history.indexOf(after)-1)] || after;
+    const alpha = Math.max(0,Math.min(1,(this.drawTick-beforeSnap.tick)/(after.tick-beforeSnap.tick || 1)));
+    const decay = this.correction ? Math.exp(-age/65) : 0;
+    return this.latest.cars.map((current,i) => {
+      if (current.participantId === this.playerId && this.predicted) return { ...current,
+        x:this.predicted.x+(this.correction?.x || 0)*decay, y:this.predicted.y+(this.correction?.y || 0)*decay,
+        angle:this.predicted.angle, speed:this.predicted.speed, rack:this.predicted.rack };
+      const before=beforeSnap.cars[i], car=after.cars[i];
       const turn = Math.atan2(Math.sin(car.angle - before.angle), Math.cos(car.angle - before.angle));
-      return { ...car, x: before.x + (car.x - before.x) * alpha, y: before.y + (car.y - before.y) * alpha,
+      return { ...current, x: before.x + (car.x - before.x) * alpha, y: before.y + (car.y - before.y) * alpha,
         angle: before.angle + turn * alpha };
     });
   }
