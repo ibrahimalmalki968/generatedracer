@@ -32,6 +32,13 @@ html:not([data-language-ready]) .overlay { visibility: hidden; }
 .language-switcher button[aria-pressed='true'] { background: var(--accent); color: var(--ink); font-weight: 800; }
 .boot-status { position: fixed; inset: 0; z-index: 22; background: var(--ink); display: flex; gap: 20px; align-items: center; justify-content: center; flex-direction: column; color: var(--muted); }
 html[data-language-ready] .boot-status { display: none; }
+/* Apply directly to nested labels and SVGs as well as their buttons in WebKit. */
+#drivingSurface, #drivingSurface * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
 #gameCanvas { display: block; width: 100%; height: 100vh; height: 100dvh; touch-action: none; }
 .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: calc(var(--header-height) + 12px) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); background: var(--ink); }
 .overlay::before { content: ''; position: absolute; top: var(--header-height); left: 20px; right: 20px; height: 2px; background: var(--line); pointer-events: none; }
@@ -151,6 +158,7 @@ button.pressed { background: #e9ffb6; color: var(--ink); border-color: var(--acc
 .touch-btn .icon { width: 28px; height: 28px; stroke-width: 2.4; }
 .touch-btn small { font-size: 10px; line-height: 1.3; }
 .touch-btn.brake { background: #3c252bf2; color: #ffd1ca; border-color: #cf8b86; }
+.touch-btn.brake.pressed { background: #ffd1ca; color: #321d23; }
 #keyHint { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--text); background: #0b1018ed; padding: 8px 12px; border-radius: 8px; pointer-events: none; max-width: 70%; text-align: center; }
 #countdown { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; background: #0b101830; }
 .countdown-content { text-align: center; padding: 20px 12px; color: var(--text); background: #0b1018ed; border: 1px solid #53617b; border-radius: 20px; width: min(280px, calc(100vw - 48px)); }
@@ -350,4 +358,11 @@ body:not([data-screen='racing']):not([data-screen='countdown']) #raceAnnouncemen
   .turbo-btn { bottom: max(12px,env(safe-area-inset-bottom)); }
   #raceToolbar { top: calc(52px + env(safe-area-inset-top)); }
   #raceStatus { top: 8px; left: 35%; right: 165px; }
+}
+
+/* Leave road visible between the HUD and thumbs when portrait browser bars are open. */
+@media (orientation: portrait) and (max-height: 600px) and (max-width: 480px) {
+  .hud-pill { padding-block: 5px; }
+  .race-identity, #raceToolbar { top: calc(var(--header-height) + 78px); }
+  .turbo-btn { width: 116px; min-height: 54px; }
 }

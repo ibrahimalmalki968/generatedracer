@@ -78,3 +78,41 @@ test('a held thumb can drift across the edge and still releases on lift',()=>set
   assert.equal(h.get().steer,-1);
   event(left,'pointerup',{pointerId:9}); assert.equal(h.get().steer,0);
 }));
+
+test('a lost capture belongs to its original button; foreign cancellation cannot drop a held thumb', () => setup(h => {
+  const steer = new Button(), brake = new Button();
+  h.bindButton(steer, 'left'); h.bindButton(brake, 'brake');
+  event(steer, 'pointerdown', { pointerId: 1, button: 0 });
+  event(brake, 'pointerdown', { pointerId: 2, button: 0 });
+  event(brake, 'lostpointercapture', { pointerId: 1 });
+  assert.equal(h.get().steer, -1);
+  event(steer, 'lostpointercapture', { pointerId: 1 });
+  assert.equal(h.get().steer, 0);
+  assert.equal(h.get().brake, 1);
+  event(window, 'pagehide');
+  assert.equal(h.get().brake, 0);
+  assert.ok(!brake.classes.has('pressed'));
+}));
+
+test('window release clears the correct button when native capture is unavailable', () => setup(h => {
+  const left = new Button();
+  left.setPointerCapture = undefined;
+  h.bindButton(left, 'left');
+  event(left, 'pointerdown', { pointerId: 3, button: 0 });
+  assert.equal(h.get().steer, -1);
+  event(window, 'pointerup', { pointerId: 3 });
+  assert.equal(h.get().steer, 0);
+  assert.ok(!left.classes.has('pressed'));
+}));
+
+test('cancel before the next tick drops an unread Turbo without cancelling the steering thumb', () => setup(h => {
+  const turbo = new Button(), steer = new Button();
+  h.bindButton(turbo, 'turbo'); h.bindButton(steer, 'left');
+  event(steer, 'pointerdown', { pointerId: 1, button: 0 });
+  event(turbo, 'pointerdown', { pointerId: 2, button: 0 });
+  event(turbo, 'pointercancel', { pointerId: 2 });
+  assert.deepEqual(h.get(), { steer: -1, brake: 0, gas: 1, turbo: false });
+  turbo.setPointerCapture = () => { throw new DOMException('Stale pointer', 'NotFoundError'); };
+  event(turbo, 'pointerdown', { pointerId: 3, button: 0 });
+  assert.equal(h.get().turbo, false);
+}));

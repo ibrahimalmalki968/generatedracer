@@ -82,23 +82,27 @@ export class Car {
     }
 
     const brake = this.input.brake;
-    const cap = MAX_SPEED * (this.turboActive ? TURBO_SPEED_MULT : 1);
+    // Ease off automatic drive in a committed turn. Brief taps keep straight-line pace.
+    const lock = Math.abs(this.rack);
+    const topSpeed = MAX_SPEED * (this.turboActive ? TURBO_SPEED_MULT : 1);
+    const cap = topSpeed * (1 - .48 * lock * lock);
     const drive = ACCELERATION * (this.turboActive ? 1.85 : 1) * (1 - .64 * Math.min(1, this.speed / cap));
     if (brake > 0) this.speed = Math.max(0, this.speed - BRAKING * brake * dt);
-    else if (this.speed > cap) this.speed = Math.max(cap, this.speed - 290 * dt);
+    else if (this.speed > cap) this.speed = Math.max(cap, this.speed - (290 + 200 * lock) * dt);
     else this.speed = Math.min(cap, this.speed + drive * dt);
 
     const demand = this.input.steer;
     const unwinding = demand * this.rack < 0 || Math.abs(demand) < Math.abs(this.rack);
-    const rate = unwinding ? 8.5 : 3.6;
+    const rate = unwinding ? 14 : 4;
     const delta = Math.max(-rate * dt, Math.min(rate * dt, demand - this.rack));
     this.rack += delta;
     const fraction = Math.min(1.4, this.speed / MAX_SPEED);
-    const yaw = TURN_RATE * Math.min(1, this.speed / 118) / (1 + .70 * fraction);
+    const yaw = TURN_RATE * Math.min(1, this.speed / 100) / (1 + .55 * fraction);
+    const cornerAuthority = 1 + .32 * this.rack * this.rack;
     const wheel = this.rack * (.70 + .30 * Math.abs(this.rack));
-    this.angle += wheel * yaw * dt;
+    this.angle += wheel * yaw * cornerAuthority * dt;
 
-    const grip = 19 - 2.5 * Math.min(1, fraction) * Math.abs(this.rack);
+    const grip = 21 + 2 * Math.abs(this.rack);
     const blend = 1 - Math.exp(-grip * dt);
     const previousSpeed = Math.hypot(this.vx, this.vy);
     const carried = Math.min(this.speed,previousSpeed);

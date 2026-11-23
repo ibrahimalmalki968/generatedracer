@@ -1,6 +1,18 @@
 # iPhone driving hotfix
 
-## Diagnosis and correction plan
+## Follow-up after iPhone playtesting
+
+On the previous release (`4ed60b9`), desktop WebKit computed selectable text on the Arabic Brake label and permitted selection to start. The shared resize handler also cleared active controls when the browser toolbar changed height. The driving surface now prevents native selection, callouts, dragging and gestures on its canvas, controls and their descendants. Nickname entry and menus retain browser interaction. Each touch releases independently on lift, cancellation or loss of capture. Toolbar resizing retains held controls. The portrait HUD takes less vertical space on a short viewport.
+
+The track is 232 world units wide, and its tightest measured centerline radius is about 88. At 500 units/s, the previous full-lock turning radius was 276. Sustained steering now eases automatic acceleration, turns the kart more sharply and maintains lateral grip. The measured full-lock radius at that entry speed is 186. Brief inputs have progressive turn-in. Releasing the button centers the steering sooner. Braking further tightens a turn.
+
+A scripted three-lap drive reacting every 200 ms with binary steering and no brake registered **26 barrier impacts before, five on the first revision and zero after refinement**. The same driver finished at 133 and 250 ms intervals with zero impacts on the final build. A separate test drove into each barrier, steered away and regained forward speed. These scenarios measure handling on the actual circuit. They do not measure the experience of a first-time player.
+
+**Verification.** All 106 Node tests passed. Local Chrome passed 160 gameplay checks and Edge passed 140 bilingual checks. Edge also passed 155 interface and recovery checks against the Wi-Fi preview. A delayed two-browser multiplayer race recorded the same collision and results on both clients. WebKit 27.2 and Chrome exercised the packaged game through its LAN address at 320 × 460, 390 × 620 and 844 × 355. Tests covered Brake label selection, reachability, hold and release. Chrome additionally tested simultaneous touches, lost capture, cancellation and simulated toolbar movement. Both 30 and 60 FPS motion recordings measured zero camera rotation and zero backward steps above the diagnostic threshold. Screen jolt at p95 was 0.095 px and 0.035 px, respectively. Apple’s native selection UI in iOS Safari and embedded browsers still needs an iPhone check.
+
+**Preview.** The updated package runs at [the host’s Wi-Fi address](http://192.168.100.204:8081/). The host verified HTTP and WebSocket gameplay through that address. Reachability from another physical device depends on LAN access. The existing public tunnel still serves the previous release. Automatic approval review blocked both the public server replacement and a second tunnel launch. The previous package remains available for rollback.
+
+## Previous release — diagnosis and correction plan
 
 Baseline was the clean deployment branch at `1bf2bdb`. A 16-second scripted Chrome drive on the production tunnel at 60 Hz and a local drive at 30 Hz used the actual Canvas transform, vehicle poses, acknowledgement timestamps and authoritative snapshots. Both runs added variable ordered delay. The baselines reproduced backward steps during forward travel, outside a 300 ms impact window, while the corresponding server trajectories had zero backward steps. The public run had four rendered reversals exceeding 0.75 world units, the local run seven. Public p95 camera rotation was 130°/s. These are browser reproductions. They cannot identify the exact packet history on the reported iPhone.
 

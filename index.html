@@ -13,23 +13,25 @@
   <div id="appMasthead" class="app-masthead" aria-hidden="true"><span class="brand-mark"></span><span class="brand-word" dir="ltr">Generate<span>Racer</span></span></div>
   <nav id="languageSwitcher" class="language-switcher" aria-label="" data-i18n-aria-label="language.label" dir="ltr"><button type="button" data-language="ar" lang="ar" dir="rtl" aria-pressed="true">العربية</button><span aria-hidden="true">|</span><button type="button" data-language="en" lang="en" aria-pressed="false">English</button></nav>
   <div id="bootStatus" class="boot-status" role="status"><span class="brand-word" dir="ltr">GenerateRacer</span><span data-i18n="ui.loading">جارٍ تجهيز الحلبة…</span><a href="" data-i18n="ui.reload">إعادة التحميل</a></div>
-  <canvas id="gameCanvas" aria-label="" data-i18n-aria-label="control.track"></canvas>
-  <div id="hud" class="hud hidden">
-    <div class="hud-top">
-      <div class="hud-pill position-pill"><small data-i18n="hud.position"></small><strong id="hud-position" data-i18n="position.1"></strong></div>
-      <div class="hud-pill lap-pill"><strong id="hud-lap" data-i18n="hud.lap" data-i18n-params='{"lap":1,"total":3}'></strong><span id="hud-time">0:00.000</span></div>
-      <div class="hud-pill speed-pill"><strong id="hud-speed">0</strong><small data-i18n="hud.speedUnit"></small></div>
+  <div id="drivingSurface">
+    <canvas id="gameCanvas" aria-label="" data-i18n-aria-label="control.track"></canvas>
+    <div id="hud" class="hud hidden">
+      <div class="hud-top">
+        <div class="hud-pill position-pill"><small data-i18n="hud.position"></small><strong id="hud-position" data-i18n="position.1"></strong></div>
+        <div class="hud-pill lap-pill"><strong id="hud-lap" data-i18n="hud.lap" data-i18n-params='{"lap":1,"total":3}'></strong><span id="hud-time">0:00.000</span></div>
+        <div class="hud-pill speed-pill"><strong id="hud-speed">0</strong><small data-i18n="hud.speedUnit"></small></div>
+      </div>
+      <div class="race-identity"><span id="hud-driver" dir="auto"></span><div id="hud-progress" class="lap-segments" aria-hidden="true"><i></i><i></i><i></i></div></div>
+      <button id="hud-turbo" class="turbo-btn" aria-label="" data-i18n-aria-label="control.turbo"><strong data-i18n="hud.turbo"></strong><small data-i18n="hud.turboAvailable"></small></button>
     </div>
-    <div class="race-identity"><span id="hud-driver" dir="auto"></span><div id="hud-progress" class="lap-segments" aria-hidden="true"><i></i><i></i><i></i></div></div>
-    <button id="hud-turbo" class="turbo-btn" aria-label="" data-i18n-aria-label="control.turbo"><strong data-i18n="hud.turbo"></strong><small data-i18n="hud.turboAvailable"></small></button>
-  </div>
-  <div id="touchControls" class="hidden" aria-label="" data-i18n-aria-label="control.driving">
-    <div class="touch-side">
-      <button id="btn-left" class="touch-btn" aria-label="" data-i18n-aria-label="control.left"><span data-icon="left" aria-hidden="true"></span></button>
-      <button id="btn-right" class="touch-btn" aria-label="" data-i18n-aria-label="control.right"><span data-icon="right" aria-hidden="true"></span></button>
-    </div>
-    <div class="touch-side">
-      <button id="btn-brake" class="touch-btn brake" aria-label="" data-i18n-aria-label="control.brake"><span data-icon="brake" aria-hidden="true"></span><small data-i18n="ui.brake"></small></button>
+    <div id="touchControls" class="hidden" aria-label="" data-i18n-aria-label="control.driving">
+      <div class="touch-side">
+        <button id="btn-left" class="touch-btn" aria-label="" data-i18n-aria-label="control.left"><span data-icon="left" aria-hidden="true"></span></button>
+        <button id="btn-right" class="touch-btn" aria-label="" data-i18n-aria-label="control.right"><span data-icon="right" aria-hidden="true"></span></button>
+      </div>
+      <div class="touch-side">
+        <button id="btn-brake" class="touch-btn brake" aria-label="" data-i18n-aria-label="control.brake"><span data-icon="brake" aria-hidden="true"></span><small data-i18n="ui.brake"></small></button>
+      </div>
     </div>
   </div>
   <div id="raceToolbar" class="hidden"><button id="btn-pause" aria-label="" data-i18n-aria-label="race.onlineMenu" ><span data-icon="pause" aria-hidden="true"></span><span class="button-label" data-i18n="race.onlineMenu"></span></button></div>

@@ -10,7 +10,7 @@ test('browser offers one HUD/input/camera and only server-backed race entry', as
   assert.doesNotMatch(html + css + main, /splitscreen|split-hint|hud2|inputP[12]|control\.splitKeys|local\.title/i);
   assert.doesNotMatch(main, /LocalSession|activeInputs|cameras|session\.humans|viewWidth/);
   assert.match(await source('js/camera.js'), /ctx\.translate\(width \/ 2, height \/ 2\)/);
-  assert.match(main, /const input = new InputHandler\(\)/);
+  assert.equal((main.match(/new InputHandler\(/g) || []).length, 1);
   assert.doesNotMatch(input, /keySet/);
   for (const locale of ['ar', 'en']) {
     for (const key of ['local.title', 'local.description', 'local.start', 'control.splitKeys', 'control.turbo2', 'hud.p2Position', 'pause.description', 'race.localWaiting']) {

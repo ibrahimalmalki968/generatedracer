@@ -1,6 +1,6 @@
 /** Unified keyboard, captured-pointer and gamepad controls. */
 export class InputHandler {
-  constructor() {
+  constructor(surface) {
     this.enabled = false;
     this._keys = new Set();
     this._pointers = new Map();
@@ -11,6 +11,18 @@ export class InputHandler {
     this._listen(window, 'keydown', e => this._key(e, true));
     this._listen(window, 'keyup', e => this._key(e, false));
     this._listen(window, 'blur', () => this.reset());
+    this._listen(window, 'pagehide', () => this.reset());
+    this._listen(window, 'orientationchange', () => this.reset());
+    // Release even if capture is unavailable and the finger lifts elsewhere.
+    for (const type of ['pointerup', 'pointercancel']) {
+      this._listen(window, type, e => this._release(e.pointerId, type), true);
+    }
+    if (surface) {
+      const suppress = e => { if (this.enabled && e.cancelable) e.preventDefault(); };
+      for (const type of ['contextmenu', 'selectstart', 'dragstart', 'gesturestart', 'gesturechange', 'touchstart', 'touchmove']) {
+        this._listen(surface, type, suppress, { passive: false });
+      }
+    }
     this._listen(document, 'visibilitychange', () => { if (document.hidden) this.reset(); });
     this._listen(window, 'gamepaddisconnected', () => this.reset());
   }
@@ -40,15 +52,17 @@ export class InputHandler {
     this._listen(el, 'pointerdown', e => {
       if (!this.enabled || e.button > 0) return;
       e.preventDefault();
-      el.setPointerCapture(e.pointerId);
-      this._pointers.set(e.pointerId, { action, el });
+      // An interrupted native touch can already have lost its pointer ID.
+      try { el.setPointerCapture?.(e.pointerId); }
+      catch (error) {
+        if (error.name === 'NotFoundError') return;
+        throw error;
+      }
+      this._pointers.set(e.pointerId, { action, el, unreadTap: action === 'turbo' });
       el.classList.add('pressed');
-      if (action === 'turbo') this._turboPending = true;
     });
     const release = e => {
-      if (!this._pointers.has(e.pointerId)) return;
-      this._pointers.delete(e.pointerId);
-      if (![...this._pointers.values()].some(p => p.el === el)) el.classList.remove('pressed');
+      if (this._pointers.get(e.pointerId)?.el === el) this._release(e.pointerId, e.type);
     };
     for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) this._listen(el, event, release);
     // A resting thumb can drift across a painted edge. Keep its initial control
@@ -57,6 +71,14 @@ export class InputHandler {
     if (action === 'turbo') this._listen(el, 'click', e => {
       if (this.enabled && e.detail === 0) this._turboPending = true;
     });
+  }
+
+  _release(id, type) {
+    const pointer = this._pointers.get(id);
+    if (!pointer) return;
+    if (type === 'pointerup' && pointer.unreadTap) this._turboPending = true;
+    this._pointers.delete(id);
+    if (![...this._pointers.values()].some(p => p.el === pointer.el)) pointer.el.classList.remove('pressed');
   }
 
   setEnabled(value) { this.reset(); this.enabled = value; }
@@ -92,7 +114,10 @@ export class InputHandler {
   get() {
     if (!this.enabled) return { steer: 0, gas: 0, brake: 0, turbo: false };
     const actions = new Set([...this._keys].map(k => this._action(k)));
-    for (const { action } of this._pointers.values()) actions.add(action);
+    for (const pointer of this._pointers.values()) {
+      actions.add(pointer.action);
+      pointer.unreadTap = false;
+    }
     const steer = actions.has('left') || actions.has('right')
       ? Number(actions.has('right')) - Number(actions.has('left')) : this._gamepad.steer || 0;
     const brake = Math.max(Number(actions.has('brake')), this._gamepad.brake || 0);

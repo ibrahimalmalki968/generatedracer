@@ -18,7 +18,7 @@ const presentation = new Presentation();
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const input = new InputHandler();
+const input = new InputHandler(document.getElementById('drivingSurface'));
 const hud = new Hud();
 const network = new Network();
 const lobby = new LobbyUI(network);
@@ -40,7 +40,6 @@ for (const [id, action] of [['btn-left', 'left'], ['btn-right', 'right'], ['btn-
 input.bindButton(hud.turbo, 'turbo');
 
 function resize() {
-  input.reset();
   width = canvas.clientWidth;
   height = canvas.clientHeight;
   pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
