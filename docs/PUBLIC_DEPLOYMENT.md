@@ -1,6 +1,6 @@
 # Public deployment — 10 November 2026
 
-**Current gameplay preview, 23 November 2026.** [Open GenerateRacer](https://consider-drawing-excerpt-mystery.trycloudflare.com/). The previous quick-tunnel hostname expired. The replacement serves the production build on loopback port 8086. See the [gameplay verification report](GAMEPLAY_OVERHAUL_REPORT.md). Earlier milestone records below refer to their original deployments.
+**Current gameplay preview, 23 November 2026.** [Open GenerateRacer](https://converter-regulation-text-vendor.trycloudflare.com/). The previous quick-tunnel hostname expired. The replacement serves the production build on loopback port 8086. This build includes the fixed-angle camera, progressive steering and smoother kart movement. See the [driving hotfix measurements and recordings](DRIVING_HOTFIX.md). Earlier milestone records below refer to their original deployments.
 
 Latest product change: local shared-device mode is completely removed; each device uses one HUD/input/full-screen camera. The same public URL serves the verified source without restarting the server/tunnel. Public Chrome/Edge bilingual journeys passed 140 each; public Edge UI/removal checks passed 155; full local gameplay regression passed 170 each, and all 75 automated tests passed. Reload an already-open tab once. See ONE_PLAYER_PER_DEVICE.md. No paid resource, main merge or upstream change was made.
 

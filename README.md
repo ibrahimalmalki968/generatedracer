@@ -6,7 +6,7 @@ The mobile interface now uses the Midnight Circuit design system: clear Solo/Mul
 
 **Arabic is the default. English is fully supported.** Use **العربية | English** at the top of any screen, including during a race. The choice is saved in this browser; switching updates text/direction immediately without reloading, reconnecting or changing the race. Track/steering directions stay the same. Nicknames, room codes and links remain readable. See [localization guide](docs/LOCALIZATION.md).
 
-[Play the current public build](https://consider-drawing-excerpt-mystery.trycloudflare.com/). The free Cloudflare Tunnel stays available while the host computer and its two processes are running. See the [gameplay report](docs/GAMEPLAY_OVERHAUL_REPORT.md).
+[Play the current public build](https://converter-regulation-text-vendor.trycloudflare.com/). The free Cloudflare Tunnel stays available while the host computer and its two processes are running. See the [driving hotfix measurements and recordings](docs/DRIVING_HOTFIX.md).
 
 ## Play
 
