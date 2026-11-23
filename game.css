@@ -337,7 +337,7 @@ body:not([data-screen='racing']):not([data-screen='countdown']) #raceAnnouncemen
 /* Physical thumb zones stay in place in both languages. */
 @media (any-pointer: coarse) and (min-width: 540px) {
   .touch-side { gap: 12px; }
-  .touch-btn { width: 68px; height: 62px; }
+  .touch-btn { width: clamp(68px, 9vw, 82px); height: 66px; }
   #btn-brake { margin-right: 115px; }
   .turbo-btn { width: 102px; min-height: 62px; bottom: max(20px, env(safe-area-inset-bottom)); }
 }

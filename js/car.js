@@ -88,13 +88,17 @@ export class Car {
     else if (this.speed > cap) this.speed = Math.max(cap, this.speed - 290 * dt);
     else this.speed = Math.min(cap, this.speed + drive * dt);
 
-    this.rack += (this.input.steer - this.rack) * (1 - Math.exp(-14 * dt));
+    const demand = this.input.steer;
+    const unwinding = demand * this.rack < 0 || Math.abs(demand) < Math.abs(this.rack);
+    const rate = unwinding ? 8.5 : 3.6;
+    const delta = Math.max(-rate * dt, Math.min(rate * dt, demand - this.rack));
+    this.rack += delta;
     const fraction = Math.min(1.4, this.speed / MAX_SPEED);
-    const yaw = TURN_RATE * Math.min(1, this.speed / 132) / (1 + .63 * fraction);
-    this.angle += this.rack * yaw * dt;
+    const yaw = TURN_RATE * Math.min(1, this.speed / 118) / (1 + .70 * fraction);
+    const wheel = this.rack * (.70 + .30 * Math.abs(this.rack));
+    this.angle += wheel * yaw * dt;
 
-    // The velocity direction catches up to the tires. Hard, fast turns retain a small slip angle.
-    const grip = 12 - 4.7 * Math.min(1, fraction) * Math.abs(this.rack);
+    const grip = 19 - 2.5 * Math.min(1, fraction) * Math.abs(this.rack);
     const blend = 1 - Math.exp(-grip * dt);
     const previousSpeed = Math.hypot(this.vx, this.vy);
     const carried = Math.min(this.speed,previousSpeed);

@@ -1,23 +1,31 @@
-// Orthographic ground plane tilted toward the horizon. World geometry stays in meters of track space.
-const wrap = angle => Math.atan2(Math.sin(angle), Math.cos(angle));
+// Fixed oblique map projection. The linear-target filter has the same time
+// constant at 30, 60 and 120 Hz and only sees the sampled presentation pose.
 export function follow(camera, car, width, height, dt) {
-  if (camera.heading === undefined || camera.followId !== car.id) {
-    Object.assign(camera, { heading: car.angle, x: car.x, y: car.y, followId: car.id });
+  if (camera.lastX === undefined) {
+    camera.filteredX = camera.lastX = car.x;
+    camera.filteredY = camera.lastY = car.y;
   }
-  const bend = (car.rack || 0) * Math.min(car.speed / 500, 1) * .12;
-  const difference = wrap(car.angle + bend - camera.heading);
-  camera.heading += Math.sign(difference) * Math.min(Math.abs(difference) * (1 - Math.exp(-6 * dt)), 3.3 * dt);
-  const blend = 1 - Math.exp(-18 * dt);
-  camera.x += (car.x - camera.x) * blend;
-  camera.y += (car.y - camera.y) * blend;
-  camera.scale = Math.max(.65, Math.min(1.65, width / 490, height / 425));
-  camera.depth = .77;
-  camera.anchor = height * (.62 + .075 * Math.min(1, car.speed / 550));
-  camera.rotation = -camera.heading - Math.PI / 2;
+  if (dt > 0) {
+    const tau = .055;
+    const decay = Math.exp(-dt / tau);
+    const lag = tau * (1 - decay) / dt;
+    camera.filteredX = car.x + (camera.filteredX - camera.lastX) * decay - (car.x - camera.lastX) * lag;
+    camera.filteredY = car.y + (camera.filteredY - camera.lastY) * decay - (car.y - camera.lastY) * lag;
+    camera.lastX = car.x;
+    camera.lastY = car.y;
+  }
+  // The playout pose is already continuous. Share its translation with the
+  // kart; a small filtered component softens changes without visible recentering.
+  camera.x = car.x + .10 * (camera.filteredX - car.x);
+  camera.y = car.y + .10 * (camera.filteredY - car.y);
+  camera.rotation = -.16;
+  camera.depth = .78;
+  camera.scale = Math.max(.60, Math.min(1.5, width / 540, height / 490));
+  camera.anchor = height * .53;
 }
-export function groundTransform(ctx, camera, width, height, shake) {
+export function groundTransform(ctx, camera, width, height) {
   ctx.translate(width / 2, height / 2);
-  ctx.translate(shake, camera.anchor - height / 2);
+  ctx.translate(0, camera.anchor - height / 2);
   ctx.scale(camera.scale, camera.scale * camera.depth);
   ctx.rotate(camera.rotation);
   ctx.translate(-camera.x, -camera.y);

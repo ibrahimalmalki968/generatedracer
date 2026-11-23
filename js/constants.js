@@ -35,7 +35,7 @@ export const ORDINALS  = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
 export const MAX_SPEED         = 520;
 export const ACCELERATION = 425;
 export const BRAKING = 830;
-export const TURN_RATE = 3.5;
+export const TURN_RATE = 3.05;
 
 // Turbo boost
 export const TURBO_DURATION   = 1.75; // seconds active

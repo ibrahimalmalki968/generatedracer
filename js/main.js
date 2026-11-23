@@ -144,9 +144,9 @@ function renderResults() {
   }
 }
 
-function onlineScene() {
+function onlineScene(now) {
   if (!network.latest) return;
-  const cars = network.displayCars().map(s => {
+  const cars = network.displayCars(now).map(s => {
     let car = drawingCars.get(s.id);
     if (!car) { car = new Car(s.id, s.x, s.y, s.angle); drawingCars.set(s.id, car); }
     Object.assign(car, s); return car;
@@ -160,7 +160,7 @@ function onlineScene() {
   };
   session = { cars, race };
   const own = cars.find(c => c.participantId === network.playerId);
-  const target = own?.finished ? cars.find(c => c.isHuman && !c.finished && !c.disconnected) || own : own;
+  const target = own;
   if (target) {
     if (!camera) camera = { x: target.x, y: target.y, carId: target.id };
     camera.carId = target.id;
@@ -209,12 +209,12 @@ network.addEventListener('disconnected', e => {
 function loop(ts) {
   const dt = lastTimestamp === null ? 0 : Math.min((ts - lastTimestamp) / 1000, 0.25);
   lastTimestamp = ts;
-  if (network.latest && state === 'racing') onlineScene();
   if (state === 'countdown') {
     showCountdown(Math.max(1, Math.ceil((network.room.startAt - Date.now() - network.offset) / 1000)));
   } else if (state === 'racing') {
     input.pollGamepad(); accumulator += dt;
     while (accumulator >= SIMULATION_STEP) { network.predict(input.get()); accumulator -= SIMULATION_STEP; }
+    if (network.latest) onlineScene(ts);
     const finished = network.latest?.cars.filter(c => c.finished) || [];
     show('raceStatus', finished.length > 0);
     if (finished.length) {
@@ -255,13 +255,12 @@ function renderRace(camera, dt) {
   follow(camera, car, width, height, dt);
   const hit = network.latest?.cars[car.id];
   const age = hit ? (network.latest.tick - hit.impactTick) / 60 + (performance.now() - network.latest.received) / 1000 : Infinity;
-  const amplitude = age >= 0 && age < .18 && !reducedMotion.matches ? hit.impact * (1 - age / .18) : 0;
   if (hit?.impact > 0 && age < .18 && camera.lastImpact !== hit.impactTick) {
     camera.lastImpact = hit.impactTick;
     playImpact(hit.impact);
   }
   ctx.save();
-  groundTransform(ctx, camera, width, height, amplitude ? Math.sin(age * 95) * amplitude : 0);
+  groundTransform(ctx, camera, width, height);
   drawTrack(ctx);
   const matrix = ctx.getTransform();
   for (const c of session.cars) {

@@ -82,12 +82,16 @@ test('bots anticipate corners, change lanes around traffic and physically finish
   assert.ok(lanes.size>=4 && speeds.some(b=>b>.2));assert.equal(boosts.size,5);
   assert.ok(s.cars.slice(1).every(c=>c.finished && c.lap===3 && c.turboUses<=3));
 });
-test('camera follows through the heading seam with forward framing and finite rotation',()=>{
-  const c=moving(kart(),MAX_SPEED); c.angle=Math.PI-.01;
-  const camera={}; follow(camera,c,844,390,dt);const heading=camera.heading;
-  c.angle=-Math.PI+.05;follow(camera,c,844,390,dt);
-  assert.ok(camera.heading>=heading && camera.heading-heading<.055);
-  assert.ok(camera.anchor>390*.65 && camera.depth<1 && camera.scale*52>36);
+test('camera keeps orientation, anchor and zoom through turns, braking, impact and target changes',()=>{
+  const c=moving(kart(),MAX_SPEED), camera={};
+  follow(camera,c,844,390,dt);
+  const { rotation, anchor, scale }=camera;
+  for (const angle of [Math.PI,-Math.PI,.9,-1.6]) {
+    Object.assign(c,{angle,rack:Math.sign(angle),speed:0,impact:2.5});
+    follow(camera,c,844,390,dt);
+    assert.deepEqual([camera.rotation,camera.anchor,camera.scale],[rotation,anchor,scale]);
+  }
+  assert.ok(camera.depth<1 && camera.scale*52>36);
 });
 
 test('a long acknowledgement gap bounds the visual lead while continuing to send current controls',()=>{

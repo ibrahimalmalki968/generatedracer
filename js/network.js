@@ -1,5 +1,6 @@
 import { message as notice, MessageError, isTranslationKey } from '../shared/translations.js';
 /** Authoritative WebSocket client with local prediction/reconciliation and remote interpolation. */
+import { RacePlayout } from './playout.js';
 import { Car } from './car.js';
 import { SIMULATION_STEP } from './constants.js';
 import { PROTOCOL_VERSION } from '../shared/protocol.js';
@@ -12,7 +13,7 @@ export class Network extends EventTarget {
   constructor() {
     super();
     this.socket = null; this.playerId = null; this.room = null; this.latest = null;
-    this.history = []; this.drawTick = -1; this.correction = null;
+    this.playout = new RacePlayout();
     this.predicted = null; this.pending = []; this.seq = 0; this.boost = 0;
     this.boostHeld = false; this.offset = 0; this.requests = new Map(); this.requestId = 0;
     this.reconnectTimer = null; this.retry = 0; this.stopped = false; this.ready = false;
@@ -83,7 +84,7 @@ export class Network extends EventTarget {
     });
   }
   resetRace() {
-    this.history = []; this.drawTick = -1; this.correction = null;
+    this.playout = new RacePlayout();
     this.latest = null; this.predicted = null; this.pending = [];
     this.seq = 0; this.boost = 0; this.boostHeld = false;
   }
@@ -91,16 +92,10 @@ export class Network extends EventTarget {
     if (!this.room || snapshot.roomCode !== this.room.code || snapshot.raceId !== this.room.raceId ||
         (this.latest && snapshot.tick < this.latest.tick)) return;
     this.latest = { ...snapshot, received: performance.now() };
-    if (this.history.at(-1)?.tick !== snapshot.tick) {
-      this.history.push(this.latest);
-      if (this.history.length > 10) this.history.shift();
-    }
+    this.playout.push(this.latest);
     const own = snapshot.cars.find(c => c.participantId === this.playerId);
     if (own) {
       if (!this.predicted || this.predicted.id !== own.id) this.predicted = new Car(own.id, own.x, own.y, own.angle);
-      const old = this.predicted;
-      const decay = this.correction ? Math.exp(-(performance.now()-this.correction.at)/65) : 0;
-      const x = old.x + (this.correction?.x || 0)*decay, y = old.y + (this.correction?.y || 0)*decay;
       Object.assign(this.predicted, own, { tick: snapshot.tick }); this.predicted._turboHeld = false;
       this.pending = this.pending.filter(p => p.seq > own.ack).slice(-120);
       // Server consumes the latest controls per tick. After a burst, replay only a short
@@ -109,8 +104,6 @@ export class Network extends EventTarget {
         this.predicted.input = p.input;
         this.predicted.update(SIMULATION_STEP);
       }
-      const dx = x-old.x, dy = y-old.y;
-      this.correction = Math.hypot(dx,dy) < 90 && !own.finished ? {x:dx,y:dy,at:performance.now()} : null;
     }
     this.emit('snapshot', this.latest);
   }
@@ -128,24 +121,8 @@ export class Network extends EventTarget {
       if (this.predicted.tick - this.latest.tick < MAX_LEAD_TICKS) this.predicted.update(SIMULATION_STEP);
     }
   }
-  displayCars() {
-    if (!this.latest) return [];
-    const age = performance.now() - this.latest.received;
-    // Render a short distance behind authority. Interpolate by simulation time, even with packet jitter.
-    this.drawTick = Math.max(this.drawTick, Math.min(this.latest.tick, this.latest.tick - 5 + age*.06));
-    const after = this.history.find(s => s.tick >= this.drawTick) || this.latest;
-    const beforeSnap = this.history[Math.max(0,this.history.indexOf(after)-1)] || after;
-    const alpha = Math.max(0,Math.min(1,(this.drawTick-beforeSnap.tick)/(after.tick-beforeSnap.tick || 1)));
-    const decay = this.correction ? Math.exp(-age/65) : 0;
-    return this.latest.cars.map((current,i) => {
-      if (current.participantId === this.playerId && this.predicted) return { ...current,
-        x:this.predicted.x+(this.correction?.x || 0)*decay, y:this.predicted.y+(this.correction?.y || 0)*decay,
-        angle:this.predicted.angle, speed:this.predicted.speed, rack:this.predicted.rack };
-      const before=beforeSnap.cars[i], car=after.cars[i];
-      const turn = Math.atan2(Math.sin(car.angle - before.angle), Math.cos(car.angle - before.angle));
-      return { ...current, x: before.x + (car.x - before.x) * alpha, y: before.y + (car.y - before.y) * alpha,
-        angle: before.angle + turn * alpha };
-    });
+  displayCars(now = performance.now()) {
+    return this.playout.sample(now, this.playerId, this.predicted?.input);
   }
   neutral() {
     if (this.room?.phase === 'racing') this.predict({ steer: 0, gas: 0, brake: 0, turbo: false });

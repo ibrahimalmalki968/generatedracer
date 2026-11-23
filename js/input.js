@@ -51,14 +51,8 @@ export class InputHandler {
       if (![...this._pointers.values()].some(p => p.el === el)) el.classList.remove('pressed');
     };
     for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) this._listen(el, event, release);
-    this._listen(el, 'pointermove', e => {
-      if (!this._pointers.has(e.pointerId)) return;
-      const rect = el.getBoundingClientRect();
-      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
-        release(e);
-        if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
-      }
-    });
+    // A resting thumb can drift across a painted edge. Keep its initial control
+    // until lift/cancel; captured events still arrive outside the button.
     // Keyboard/assistive activation of the visible Turbo button.
     if (action === 'turbo') this._listen(el, 'click', e => {
       if (this.enabled && e.detail === 0) this._turboPending = true;

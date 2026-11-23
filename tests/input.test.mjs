@@ -70,3 +70,11 @@ test('destroy removes keyboard/pointer listeners and capture state', () => setup
   event(brake, 'pointerdown', { pointerId: 9, button: 0 }); event(window, 'keydown', { code: 'KeyS' });
   assert.equal(h.get().brake, 0); assert.equal(brake.captures.size, 0);
 }));
+
+test('a held thumb can drift across the edge and still releases on lift',()=>setup(h=>{
+  const left=new Button(); h.bindButton(left,'left');
+  event(left,'pointerdown',{pointerId:9,button:0});
+  event(left,'pointermove',{pointerId:9,clientX:-12,clientY:5});
+  assert.equal(h.get().steer,-1);
+  event(left,'pointerup',{pointerId:9}); assert.equal(h.get().steer,0);
+}));

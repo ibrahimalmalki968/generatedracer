@@ -36,6 +36,7 @@ try {
         const now=performance.now();
         lastRecv=Math.max(lastRecv+.1,now+34+14*Math.sin(snapshot.tick*.12));
         setTimeout(()=>{
+          const x=this.predicted?.x, y=this.predicted?.y;
           apply.call(this,snapshot);window.net=this;
           stat.snaps++;stat.bytes+=JSON.stringify(snapshot).length;
           if(snapshot.cars.every(c=>c.impactTick>0) && Math.abs(snapshot.cars[0].impactTick-snapshot.cars[1].impactTick)<=1 &&
@@ -44,7 +45,7 @@ try {
             if(!stat.impact.includes(tick))stat.impact.push(tick);
           }
           stat.history=Math.max(stat.history,this.pending.length);
-          if(this.correction)stat.corrections.push(Math.hypot(this.correction.x,this.correction.y));
+          if(Number.isFinite(x))stat.corrections.push(Math.hypot(this.predicted.x-x,this.predicted.y-y));
         },lastRecv-now);
       };
       Network.prototype.predict=function(input){
@@ -77,7 +78,13 @@ try {
   await a.waitForFunction(()=>sample.impact.length>0,null,{timeout:5000});
   await touch('touchStart',[right,brake]);
   await a.waitForFunction(()=>net.predicted.input.brake===1 && net.predicted.input.steer===1);
-  await touch('touchEnd',[]);await touch('touchStart',[right,turbo]);
+  // Keep steering even when the contact slides past its painted edge.
+  await touch('touchMove',[{...right,y:right.y-45},brake]);
+  await a.waitForTimeout(110);
+  assert.equal(await a.evaluate(()=>net.predicted.input.steer),1);
+  await touch('touchCancel',[]);
+  await a.waitForFunction(()=>net.predicted.input.steer===0 && net.predicted.input.brake===0);
+  await touch('touchStart',[right,turbo]);
   await a.waitForFunction(()=>net.latest.cars[0].turboUses===1);
   await touch('touchEnd',[]);
   for(const p of [a,b])await p.evaluate(()=>{window.drive=true});
@@ -91,7 +98,7 @@ try {
   const reports=await Promise.all([a,b].map(p=>p.evaluate(()=>{
     const percentile=(values,q)=>values.sort((a,b)=>a-b)[Math.min(values.length-1,Math.floor(values.length*q))];
     return {results:net.room.results,impactTicks:sample.impact,frames:sample.frames.length,medianMs:percentile(sample.frames,.5),
-      p95Ms:percentile(sample.frames,.95),correctionP95:percentile(sample.corrections,.95),maxPending:sample.history,maxLead:sample.maxLead,
+      p95Ms:percentile(sample.frames,.95),predictionResetP95:percentile(sample.corrections,.95),maxPending:sample.history,maxLead:sample.maxLead,
       bytesPerSnap:sample.bytes/sample.snaps,snapshots:sample.snaps};
   })));
   assert.deepEqual(reports[0].results,reports[1].results);
